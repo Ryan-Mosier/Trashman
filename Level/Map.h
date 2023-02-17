@@ -15,7 +15,7 @@ struct Position{
 };
 
 
-struct Enemy{
+struct Entity{
     Position pos;
     string* id;
 };
@@ -34,15 +34,15 @@ struct TileData{
 
 class Game {
 private:
-    static const int xsize = 10, ysize = 10;
+    static const int xsize = 11, ysize = 11;
     TileData Map[xsize][ysize];
-    Enemy enemys[4];
+    Entity enemy[3];
     int score;
 
 public:
     Game();
     void printMap();
-
+    void moveEntity(Entity *entity);
     void generateLevel();
 };
 

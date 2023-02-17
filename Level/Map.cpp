@@ -7,22 +7,6 @@
 
 using namespace std;
 
-Game::Game() {
-    generateLevel();
-}
-
-void Game::printMap() {
-    for (auto &i: Map) {
-        for (TileData j: i) {
-            if (j.isVoid) {
-                cout << " # ";
-            } else if (!j.isVoid) {
-                cout << "   ";
-            }
-        }
-        cout << "\n";
-    }
-}
 
 void TileData::setVoid() {
     isVoid = true;
@@ -48,6 +32,32 @@ void TileData::setPlayer() {
     hasRecycling = false;
 }
 
+
+Game::Game() {
+    generateLevel();
+}
+
+void Game::printMap() {
+    cout << "#  #  #  #  #  #  #  #  #  #  #  #  #\n";
+    for (auto &i: Map) {
+        for (int j = -1; j < xsize + 1; j++) {
+            if (j != -1 && j != xsize) {
+                if (i[j].isVoid) {
+                    cout << " # ";
+                }
+                if (!i[j].isVoid) {
+                    cout << "   ";
+                }
+            } else {
+                if (j == -1) cout << "# ";
+                else cout << " #";
+            }
+        }
+        cout << endl;
+    }
+    cout << "#  #  #  #  #  #  #  #  #  #  #  #  #\n";
+}
+
 void Game::generateLevel() {
     score += 100;
     // -1 = void
@@ -59,16 +69,17 @@ void Game::generateLevel() {
     //
     //
 
-    int arr[xsize][ysize] = {{0,  0,  0,  0,  0, 0, 0,  0,  0,  0},
-                             {0,  -1, -1, -1, 0, 0, -1, -1, -1, 0},
-                             {0,  0,  -1, 0,  0, 0, 0,  -1, 0,  0},
-                             {0,  0,  0,  0,  0, 0, 0,  0,  0,  0},
-                             {-1, -1, 0,  -1, 0, 0, -1, 0,  -1, -1},
-                             {-1, -1, 0,  -1, 0, 0, -1, 0,  -1, -1},
-                             {0,  0,  0,  0,  0, 0, 0,  0,  0,  0},
-                             {0,  0,  -1, 0,  0, 0, 0,  -1, 0,  0},
-                             {0,  -1, -1, -1, 0, 0, -1, -1, -1, 0},
-                             {0,  0,  0,  0,  0, 0, 0,  0,  0,  0}};
+    int arr[xsize][ysize] = {{0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0},
+                             {0,  -1, -1, -1, -1, 0,  -1, -1, -1, -1, 0},
+                             {0,  0,  -1, 0,  -1, 0,  -1, 0,  -1, 0,  0},
+                             {-1, 0,  0,  0,  0,  0,  0,  0,  0,  0,  -1},
+                             {-1, -1, 0,  -1, -1, -1, -1, -1, 0,  -1, -1},
+                             {0,  0,  0,  -1, 0,  0,  0,  -1, 0,  0,  0},
+                             {-1, -1, 0,  -1, -1, -1, -1, -1, 0,  -1, -1},
+                             {-1, 0,  0,  0,  0,  0,  0,  0,  0,  0,  -1},
+                             {0,  0,  -1, 0,  -1, 0,  -1, 0,  -1, 0,  0},
+                             {0,  -1, -1, -1, -1, 0,  -1, -1, -1, -1, 0},
+                             {0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0}};
 //    int arr[10][10] = {{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 //                             { 0,-1,-1,-1, 0, 0,-1,-1,-1, 0},
 //                             { 0, 0,-1, 0, 0, 0, 0,-1, 0, 0},
@@ -90,4 +101,8 @@ void Game::generateLevel() {
         }
 
     }
+}
+
+void Game::moveEntity(Entity *entity) {
+//TODO: move enemies
 }
