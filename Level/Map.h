@@ -7,43 +7,88 @@
 
 #include <string>
 
+
 using namespace std;
 
-struct Position{
+struct Position {
     int x;
     int y;
+
+    Position(int x_, int y_) {
+        x = x_;
+        y = y_;
+    }
+
+    Position() = default;
 };
 
 
-struct Entity{
+struct Entity {
     Position pos;
-    string* id;
+    string id;
+    int deathlength;
+    char prevMove;
+    // player == player
+    //ghost 1 == 1
+    //ghost 2 == 2
+    //ghost 3 == 3
 };
 
-struct TileData{
+struct TileData {
     bool isVoid;
-    bool hasPlayer;
-    bool hasEnemy;
+
+    Entity *entity = nullptr;
+
+    // garbage is the pellets
     bool hasGarbage;
+    // recycling is the cherry
     bool hasRecycling;
 
     void setVoid();
+
     void setEmpty();
+
     void setPlayer();
 };
 
 class Game {
 private:
+
+    //TODO:lives?
+    int tickNum;
     static const int xsize = 11, ysize = 11;
     TileData Map[xsize][ysize];
-    Entity enemy[3];
+    Entity *enemy;
+    // array of size 3
+    Entity *player;
+
+    /*
+     * Pac-Dot = 10 Pts
+     * Power Pellet = 50 Pts
+     * 1st Ghost = 200 Pts
+     * 2nd Ghost = 400 Pts
+     * 3rd Ghost = 800 Pts
+     * 4th Ghost = 1600 Pts
+     */
     int score;
 
 public:
+
     Game();
+
+    ~Game();
+
     void printMap();
-    void moveEntity(Entity *entity);
+
+    void moveEntity(Entity *entity, char curr);
+
     void generateLevel();
+
+    void movePlayer(char input);
+
+    void tick();
+
+    void kill();
 };
 
 #endif //TRASHMAN_MAP_H
