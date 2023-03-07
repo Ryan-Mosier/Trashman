@@ -1,7 +1,12 @@
 #include <iostream>
-#include "Level/Map.h"
+#include "Game/Game.h"
 
 int main() {
-    Game game;
-    game.printMap();
+    std::system("clear");
+    Game g;
+    g.printMap();
+    while(true){
+        g.tick();
+        g.printMap();
+    }
 }

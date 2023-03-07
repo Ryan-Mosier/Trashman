@@ -2,13 +2,24 @@
 // Created by ryanm on 2/16/2023.
 //
 
-#include "Map.h"
+#include "Game.h"
 #include "colors.h"
 #include <iostream>
 #include <cstdlib>
+#include <chrono>
+#include <thread>
+#include <termios.h>
+#include <unistd.h>
+#include "Pathfinding.h"
+
 
 using namespace std;
 
+void fullExit() {
+    system("clear");
+    cout << "EXITING\n";
+    exit(42);
+}
 
 void TileData::setVoid() {
     isVoid = true;
@@ -24,13 +35,6 @@ void TileData::setEmpty() {
     hasRecycling = false;
 }
 
-void TileData::setPlayer() {
-    isVoid = false;
-    entity = nullptr;
-    hasGarbage = false;
-    hasRecycling = false;
-}
-
 
 Game::Game() {
     //TODO: place enemies and player on map
@@ -39,7 +43,7 @@ Game::Game() {
     tickNum = 0;
     score = 0;
     generateLevel();
-
+    player->prevMove = 'w';
     /*#region entity.id*/
     player->id = "player";
     enemy[0].id = "1";
@@ -168,9 +172,6 @@ bool validateCharMov(char check) {
 void Game::moveEntity(Entity *entity, char curr) {
     int xpos = entity->pos.x, ypos = entity->pos.y;
 
-    if (entity->id != "player") {
-        //TODO:pathfinding and generate direction
-    }
 
     if (validateCharMov(curr)) {
         entity->prevMove = curr;
@@ -212,9 +213,9 @@ void Game::moveEntity(Entity *entity, char curr) {
         return;
     }
     Map[xpos][ypos].entity = nullptr;
-    if(entity->id != "player"){
-        if(Map[newx][newy].entity->id == "player"){
-            //TODO: CALL END FUNCTION AND
+    if (entity->id != "player") {
+        if (Map[newx][newy].entity->id == "player") {
+            kill();
         }
     }
     Map[newx][newy].entity = entity;
@@ -229,19 +230,126 @@ void Game::moveEntity(Entity *entity, char curr) {
 
     }
 
-    //TODO: collisionlogic
+    //TODO: collisionlogic?
 }
 
+void Game::moveEntity(Entity *entity, Position newpos) {
+    int difference = abs(entity->pos.x - newpos.x) + abs(entity->pos.y - newpos.y);
+    if (difference < 2) {
+        Map[entity->pos.x][entity->pos.y].entity = nullptr;
+        entity->pos = newpos;
+        if(Map[newpos.x][newpos.y].entity == player){
+            kill();
+        }
+        Map[entity->pos.x][entity->pos.y].entity = entity;
+    }else{
+        fullExit();
+    }
+}
 
 void Game::tick() {
-    //TODO: tick function
+    char in = '\0';
+    if (tickNum == 0) {
+        while (!validateCharMov(in)) {
+            string input;
+
+            /*#region Input*/
+            struct termios orig_termios;  // store original terminal settings
+
+            tcgetattr(STDIN_FILENO, &orig_termios);  // get current terminal settings
+            struct termios new_termios = orig_termios;
+            new_termios.c_lflag &= ~(ICANON | ECHO);  // set non-canonical mode and turn off echoing
+            tcsetattr(STDIN_FILENO, TCSANOW, &new_termios);  // apply new terminal settings
+
+            auto start = std::chrono::steady_clock::now();  // get the start time
+
+            while (std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::steady_clock::now() - start).count() <
+                   1000)  // loop for 1 second
+            {
+                char c;
+                if (read(STDIN_FILENO, &c, 1) == 1)  // read one character of input
+                {
+                    input += input;
+                }
+            }
+
+            tcsetattr(STDIN_FILENO, TCSANOW, &orig_termios);  // restore original terminal settings
+
+            /*#endregion*/
+
+            if (!input.empty()) {
+                for (int i = int(input.length()); i > -1; i--) {
+                    in = input[i];
+                    if (validateCharMov(in)) break;
+                }
+            }
+        }
+    } else if (tickNum % 2 == 0) {
+        string input;
+
+        /*#region Input*/
+        struct termios orig_termios;  // store original terminal settings
+
+        tcgetattr(STDIN_FILENO, &orig_termios);  // get current terminal settings
+        struct termios new_termios = orig_termios;
+        new_termios.c_lflag &= ~(ICANON | ECHO);  // set non-canonical mode and turn off echoing
+        tcsetattr(STDIN_FILENO, TCSANOW, &new_termios);  // apply new terminal settings
+
+        auto start = std::chrono::steady_clock::now();  // get the start time
+
+        while (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count() <
+               1000)  // loop for 1 second
+        {
+            char c;
+            if (read(STDIN_FILENO, &c, 1) == 1)  // read one character of input
+            {
+                input += input;
+            }
+        }
+
+        tcsetattr(STDIN_FILENO, TCSANOW, &orig_termios);  // restore original terminal settings
+
+        /*#endregion*/
+
+        if (!input.empty()) {
+            for (int i = int(input.length()); i > -1; i--) {
+                in = input[i];
+                if (validateCharMov(in)) break;
+            }
+        }
+    }
+
+    if (tickNum % 2 == 0) {
+        moveEntity(player, in);
+    }
+    if (tickNum % 3 == 0) {
+        for (int i = 0; i < 3; i++) {
+            vector<Node *> path;
+            path = a_star(player->pos, enemy[i].pos, Map);
+            //vector is sorted start --> end
+
+        }
+
+        //TODO: move ghosts
+    }
+
+
+    tickNum++;
+
+
+    //TODO:finish tick function (what do I mean by this)
 }
 
 void Game::movePlayer(char input) {
     moveEntity(player, input);
 }
 
+
 void Game::kill() {
-    exit(score);
-    //TODO: print endscreen and exit function
+    system("clear");
+    cout << "You Died!\n========\nYour Score: " << score << "\n";
+    this_thread::sleep_for(chrono::seconds(2));
+    //TODO: print endscreen
+    exit(1);
 }

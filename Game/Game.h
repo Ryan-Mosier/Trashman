@@ -2,10 +2,11 @@
 // Created by ryanm on 2/16/2023.
 //
 
-#ifndef TRASHMAN_MAP_H
-#define TRASHMAN_MAP_H
+#ifndef TRASHMAN_GAME_H
+#define TRASHMAN_GAME_H
 
 #include <string>
+#include "Pathfinding.h"
 
 
 using namespace std;
@@ -22,6 +23,7 @@ struct Position {
     Position() = default;
 };
 
+void fullExit();
 
 struct Entity {
     Position pos;
@@ -56,7 +58,6 @@ private:
 
     //TODO:lives?
     int tickNum;
-    static const int xsize = 11, ysize = 11;
     TileData Map[xsize][ysize];
     Entity *enemy;
     // array of size 3
@@ -81,6 +82,7 @@ public:
     void printMap();
 
     void moveEntity(Entity *entity, char curr);
+    void moveEntity(Entity *entity, Position);
 
     void generateLevel();
 
@@ -91,4 +93,4 @@ public:
     void kill();
 };
 
-#endif //TRASHMAN_MAP_H
+#endif //TRASHMAN_GAME_H
