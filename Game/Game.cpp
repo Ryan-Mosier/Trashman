@@ -2,13 +2,15 @@
 // Created by ryanm on 2/16/2023.
 //
 
+#include <iostream>
+#include <chrono>
+#include <vector>
+#include <ncurses.h>
+#include <unordered_set>
 #include "Game.h"
 #include "colors.h"
-#include <iostream>
 #include <cstdlib>
-#include <chrono>
 #include <thread>
-#include <termios.h>
 #include <unistd.h>
 #include "Pathfinding.h"
 
@@ -18,6 +20,7 @@ using namespace std;
 void fullExit() {
     system("clear");
     cout << "EXITING\n";
+    endwin(); // end ncurses mode
     exit(42);
 }
 
@@ -34,7 +37,6 @@ void TileData::setEmpty() {
     hasGarbage = false;
     hasRecycling = false;
 }
-
 
 Game::Game() {
     //TODO: place enemies and player on map
@@ -61,36 +63,42 @@ Game::~Game() {
 void Game::printMap() {
     //TODO: Render to window
 
+    clear();
 
-    system("clear");
-    cout << "#  #  #  #  #  #  #  #  #  #  #  #  #\n";
+    //TODO: colors
+
+    printw("#  #  #  #  #  #  #  #  #  #  #  #  #\n");
     for (auto &i: Map) {
         for (int j = -1; j < xsize + 1; j++) {
             if (j != -1 && j != xsize) {
                 if (i[j].isVoid) {
-                    cout << " # ";
+                    printw(" # ");
                 } else if (i[j].entity != nullptr) {
                     if (i[j].entity->id == "player") {
-                        cout << YELLOW;
+                        attron(COLOR_PAIR(YELLOW)); // enable color pair 1 (YELLOW)
                     } else if (i[j].entity->id == "1") {
-                        cout << RED;
+                        attron(COLOR_PAIR(RED)); // enable color pair 2 (RED)
                     } else if (i[j].entity->id == "2") {
-                        cout << MAGENTA;
+                        attron(COLOR_PAIR(MAGENTA)); // enable color pair 3 (MAGENTA)
                     } else if (i[j].entity->id == "3") {
-                        cout << CYAN;
+                        attron(COLOR_PAIR(CYAN)); // enable color pair 4 (CYAN)
                     }
-                    cout << " @ " << RESET;
+                    printw(" @ ");
+                    attroff(COLOR_PAIR(YELLOW)); // disable color pair 1
+                    attroff(COLOR_PAIR(RED)); // disable color pair 2
+                    attroff(COLOR_PAIR(MAGENTA)); // disable color pair 3
+                    attroff(COLOR_PAIR(CYAN)); // disable color pair 4
                 } else if (!i[j].isVoid) {
-                    cout << "   ";
+                    printw("   ");
                 }
             } else {
-                if (j == -1) cout << "# ";
-                else cout << " #";
+                if (j == -1) printw("# ");
+                else printw(" #");
             }
         }
-        cout << endl;
+        printw("\n");
     }
-    cout << "#  #  #  #  #  #  #  #  #  #  #  #  #\n";
+    printw("#  #  #  #  #  #  #  #  #  #  #  #  #\n");
 }
 
 void Game::generateLevel() {
@@ -121,12 +129,12 @@ void Game::generateLevel() {
     enemyTile3.entity = &enemy[2];
     /*#endregion */
 
-    int arr[xsize][ysize] = {{0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0},
+    int arr[xsize][ysize] = {{1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0},
                              {0,  -1, -1, -1, -1, 0,  -1, -1, -1, -1, 0},
                              {0,  0,  -1, 0,  -1, 0,  -1, 0,  -1, 0,  0},
                              {-1, 0,  0,  0,  0,  0,  0,  0,  0,  0,  -1},
                              {-1, -1, 0,  -1, -1, -1, -1, -1, 0,  -1, -1},
-                             {0,  0,  1,  -1, 7,  8,  9,  -1, 0,  0,  0},
+                             {0,  0,  7,  -1, 0,  8,  9,  -1, 0,  0,  0},
                              {-1, -1, 0,  -1, -1, -1, -1, -1, 0,  -1, -1},
                              {-1, 0,  0,  0,  0,  0,  0,  0,  0,  0,  -1},
                              {0,  0,  -1, 0,  -1, 0,  -1, 0,  -1, 0,  0},
@@ -238,100 +246,99 @@ void Game::moveEntity(Entity *entity, Position newpos) {
     if (difference < 2) {
         Map[entity->pos.x][entity->pos.y].entity = nullptr;
         entity->pos = newpos;
-        if(Map[newpos.x][newpos.y].entity == player){
+        if (Map[newpos.x][newpos.y].entity == player) {
             kill();
         }
         Map[entity->pos.x][entity->pos.y].entity = entity;
-    }else{
+    } else {
         fullExit();
     }
 }
 
+bool isValidInput(char input) {
+    std::unordered_set<char> validInputs = {'w', 'a', 's', 'd', 'k'};
+    return (validInputs.find(input) != validInputs.end());
+}
+
+std::vector<char> getPressedKeys() {
+    std::vector<char> keys;
+    char ch;
+
+    nodelay(stdscr, true); // don't restart the timeout everytime a key is pressed
+
+    timeout(10);
+
+    clock_t start = clock();
+
+    auto start_time = std::chrono::steady_clock::now();
+
+    while (true) {
+        ch = getch();
+        if (ch != ERR) {
+            keys.push_back(ch);
+        }
+
+        // measure elapsed time
+        clock_t end = clock();
+        double elapsedSeconds = double(end - start) / CLOCKS_PER_SEC;
+        if (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - start_time).count() >=
+            1) {
+            break;
+        }
+
+    }
+    return keys;
+}
+
+char findLatestValidKey(std::vector<char> vec) {
+    while (!vec.empty()) {
+        if (isValidInput(vec.back())) {
+            return vec.back();
+        } else {
+            vec.pop_back();
+        }
+    }
+    return '\0';
+}
+
+
 void Game::tick() {
     char in = '\0';
     if (tickNum == 0) {
-        while (!validateCharMov(in)) {
-            string input;
-
-            /*#region Input*/
-            struct termios orig_termios;  // store original terminal settings
-
-            tcgetattr(STDIN_FILENO, &orig_termios);  // get current terminal settings
-            struct termios new_termios = orig_termios;
-            new_termios.c_lflag &= ~(ICANON | ECHO);  // set non-canonical mode and turn off echoing
-            tcsetattr(STDIN_FILENO, TCSANOW, &new_termios);  // apply new terminal settings
-
-            auto start = std::chrono::steady_clock::now();  // get the start time
-
-            while (std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::steady_clock::now() - start).count() <
-                   1000)  // loop for 1 second
-            {
-                char c;
-                if (read(STDIN_FILENO, &c, 1) == 1)  // read one character of input
-                {
-                    input += input;
-                }
-            }
-
-            tcsetattr(STDIN_FILENO, TCSANOW, &orig_termios);  // restore original terminal settings
-
-            /*#endregion*/
-
-            if (!input.empty()) {
-                for (int i = int(input.length()); i > -1; i--) {
-                    in = input[i];
-                    if (validateCharMov(in)) break;
-                }
-            }
-        }
+        in = findLatestValidKey(getPressedKeys());
+        moveEntity(player, in);
     } else if (tickNum % 2 == 0) {
-        string input;
-
-        /*#region Input*/
-        struct termios orig_termios;  // store original terminal settings
-
-        tcgetattr(STDIN_FILENO, &orig_termios);  // get current terminal settings
-        struct termios new_termios = orig_termios;
-        new_termios.c_lflag &= ~(ICANON | ECHO);  // set non-canonical mode and turn off echoing
-        tcsetattr(STDIN_FILENO, TCSANOW, &new_termios);  // apply new terminal settings
-
-        auto start = std::chrono::steady_clock::now();  // get the start time
-
-        while (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count() <
-               1000)  // loop for 1 second
-        {
-            char c;
-            if (read(STDIN_FILENO, &c, 1) == 1)  // read one character of input
-            {
-                input += input;
-            }
-        }
-
-        tcsetattr(STDIN_FILENO, TCSANOW, &orig_termios);  // restore original terminal settings
-
-        /*#endregion*/
-
-        if (!input.empty()) {
-            for (int i = int(input.length()); i > -1; i--) {
-                in = input[i];
-                if (validateCharMov(in)) break;
-            }
-        }
+        in = findLatestValidKey(getPressedKeys());
     }
 
     if (tickNum % 2 == 0) {
         moveEntity(player, in);
     }
+
     if (tickNum % 3 == 0) {
+        Position outOfBox(5, 2);
+        if (tickNum == 5) {
+            Map[enemy[0].pos.x][enemy[0].pos.y].entity = nullptr;
+            enemy[0].pos = outOfBox;
+            Map[outOfBox.x][outOfBox.y].entity = &enemy[0];
+        } else if (tickNum == 10) {
+            Map[enemy[1].pos.x][enemy[1].pos.y].entity = nullptr;
+            enemy[1].pos = outOfBox;
+            Map[outOfBox.x][outOfBox.y].entity = &enemy[1];
+        } else if (tickNum == 15) {
+            Map[enemy[2].pos.x][enemy[2].pos.y].entity = nullptr;
+            enemy[2].pos = outOfBox;
+            Map[outOfBox.x][outOfBox.y].entity = &enemy[2];
+        }
         for (int i = 0; i < 3; i++) {
-            vector<Node *> path;
+            vector<Position> path;
             path = a_star(player->pos, enemy[i].pos, Map);
             //vector is sorted start --> end
-
+            if (path.size() > 2) {
+                moveEntity(&enemy[i], path[1]);
+            }
+            //TODO: verify that pathfinding works
         }
-
-        //TODO: move ghosts
     }
 
 
@@ -351,5 +358,6 @@ void Game::kill() {
     cout << "You Died!\n========\nYour Score: " << score << "\n";
     this_thread::sleep_for(chrono::seconds(2));
     //TODO: print endscreen
+    endwin(); // end ncurses mode
     exit(1);
 }

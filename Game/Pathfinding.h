@@ -28,7 +28,7 @@ struct Node{
 
 int distance(Node* node1, Node* node2);
 
-std::vector<Node*> a_star(Position startpos, Position goalpos, TileData grid[xsize][ysize]);
+std::vector<Position> a_star(Position startpos, Position goalpos, TileData grid[xsize][ysize]);
 
 void calculateCosts(Node *start,Node *goal,Node map[ysize][xsize]);
 

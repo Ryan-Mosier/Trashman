@@ -8,18 +8,15 @@
 #include <string>
 #include "Pathfinding.h"
 
-
 using namespace std;
 
 struct Position {
     int x;
     int y;
-
     Position(int x_, int y_) {
         x = x_;
         y = y_;
     }
-
     Position() = default;
 };
 
@@ -41,9 +38,9 @@ struct TileData {
 
     Entity *entity = nullptr;
 
-    // garbage is the pellets
+
     bool hasGarbage;
-    // recycling is the cherry
+
     bool hasRecycling;
 
     void setVoid();
@@ -51,6 +48,9 @@ struct TileData {
     void setEmpty();
 
     void setPlayer();
+
+    // garbage is the pellets
+    // recycling is the cherry
 };
 
 class Game {

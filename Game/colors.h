@@ -3,75 +3,51 @@
 //
 
 #ifndef RESET
-#define RESET   "\033[0m"
-#endif
-
-#ifndef BRIGHTBLUE
-#define BRIGHTBLUE "\u001b[34;1m"
-#endif
-
-#ifndef BLACK
-#define BLACK   "\033[30m"      /* Black */
-#endif
-
-#ifndef RED
-#define RED     "\033[31m"      /* Red */
-#endif
-
-#ifndef GREEN
-#define GREEN   "\033[32m"      /* Green */
-#endif
-
-#ifndef YELLOW
-#define YELLOW  "\033[33m"      /* Yellow */
+#define RESET 0
 #endif
 
 #ifndef BLUE
-#define BLUE    "\033[34m"      /* Blue */
+#define BLUE 2
+#endif
+
+#ifndef BLACK
+#define BLACK   3      /* Black */
+#endif
+
+#ifndef RED
+#define RED     4      /* Red */
+#endif
+
+#ifndef GREEN
+#define GREEN   5      /* Green */
+#endif
+
+#ifndef YELLOW
+#define YELLOW  5      /* Yellow */
 #endif
 
 #ifndef MAGENTA
-#define MAGENTA "\033[35m"      /* Magenta */
+#define MAGENTA 6      /* Magenta */
 #endif
 
 #ifndef CYAN
-#define CYAN    "\033[36m"      /* Cyan */
+#define CYAN    7      /* Cyan */
 #endif
 
 #ifndef WHITE
-#define WHITE   "\033[37m"      /* White */
+#define WHITE   RESET      /* White */
 #endif
 
-
-
-#ifndef BOLDBLACK
-#define BOLDBLACK   "\033[1m\033[30m"      /* Bold Black */
-#endif
-
-#ifndef BOLDRED
-#define BOLDRED     "\033[1m\033[31m"      /* Bold Red */
-#endif
-
-#ifndef BOLDGREEN
-#define BOLDGREEN   "\033[1m\033[32m"      /* Bold Green */
-#endif
-
-#ifndef BOLDYELLOW
-#define BOLDYELLOW  "\033[1m\033[33m"      /* Bold Yellow */
-#endif
-
-#ifndef BOLDBLUE
-#define BOLDBLUE    "\033[1m\033[34m"      /* Bold Blue */
-#endif
-
-#ifndef BOLDMAGENTA
-#define BOLDMAGENTA "\033[1m\033[35m"      /* Bold Magenta */
-#endif
-
-#ifndef BOLDCYAN
-#define BOLDCYAN    "\033[1m\033[36m"      /* Bold Cyan */
-#endif
-
-#ifndef BOLDWHITE
-#define BOLDWHITE   "\033[1m\033[37m"      /* Bold White */
+#ifndef START_COLORS
+#define START_COLORS { \
+start_color();                             \
+init_pair(RESET, COLOR_WHITE,COLOR_BLACK); \
+init_pair(BLUE,COLOR_BLUE,COLOR_BLACK);    \
+init_pair(BLACK,COLOR_BLACK,COLOR_BLACK);  \
+init_pair(RED,COLOR_RED,COLOR_BLACK);      \
+init_pair(GREEN,COLOR_GREEN,COLOR_BLACK);  \
+init_pair(YELLOW,COLOR_YELLOW,COLOR_BLACK);\
+init_pair(MAGENTA,COLOR_MAGENTA,COLOR_BLACK); \
+init_pair(CYAN,COLOR_CYAN,COLOR_BLACK);    \
+}
 #endif
