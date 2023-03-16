@@ -15,17 +15,27 @@ checkfile:
 Main: main.cpp | checkfile
 	if [ $(FILE_EXISTS) = "true" ]; then \
 		echo "File exists!"; \
-		g++ main.cpp -o TrashMan; \
+		g++ main.cpp -lncurses Game.o -o TrashMan; \
 	else \
 		echo "File does not exist!"; \
 		$(MAKE) -C Game; \
-		g++ main.cpp Game.o -o TrashMan; \
+		g++ main.cpp Game.o -lncurses -o TrashMan; \
 	fi
 	chmod +x Harness.sh
 
 Game:
 	cd Game && $(MAKE)
 
+PinsIO: Pins/PinIO.cpp
+	g++ Pins/PinIO.cpp -o IO
+	mv Pins/IO ..
+
+
 Test:
 	g++ test.cpp -o test
 	./test
+
+cleanTest:
+	g++ test.cpp -o test
+	rm test
+
