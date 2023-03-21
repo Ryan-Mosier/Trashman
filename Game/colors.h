@@ -7,7 +7,7 @@
 #endif
 
 #ifndef BLUE
-#define BLUE 2
+#define BLUE 2          /* Blue */
 #endif
 
 #ifndef BLACK
