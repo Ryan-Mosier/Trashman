@@ -317,15 +317,15 @@ void Game::tick() {
 
     if (tickNum % 3 == 0) {
         Position outOfBox(5, 2);
-        if (tickNum == 5) {
+        if (tickNum == 3) {
             Map[enemy[0].pos.x][enemy[0].pos.y].entity = nullptr;
             enemy[0].pos = outOfBox;
             Map[outOfBox.x][outOfBox.y].entity = &enemy[0];
-        } else if (tickNum == 10) {
+        } else if (tickNum == 12) {
             Map[enemy[1].pos.x][enemy[1].pos.y].entity = nullptr;
             enemy[1].pos = outOfBox;
             Map[outOfBox.x][outOfBox.y].entity = &enemy[1];
-        } else if (tickNum == 15) {
+        } else if (tickNum == ) {
             Map[enemy[2].pos.x][enemy[2].pos.y].entity = nullptr;
             enemy[2].pos = outOfBox;
             Map[outOfBox.x][outOfBox.y].entity = &enemy[2];
