@@ -3,6 +3,9 @@
 #include <ncurses.h>
 #include "Game/colors.h"
 
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "EndlessLoop"
+
 int main() {
     initscr(); // initialize ncurses
     cbreak(); // set keyboard input to immediate mode
@@ -16,3 +19,5 @@ int main() {
         g.printMap();
     }
 }
+
+#pragma clang diagnostic pop

@@ -12,7 +12,7 @@
 #include <cstdlib>
 #include <thread>
 #include <unistd.h>
-#include "Pathfinding.h"
+#include "aStar.h"
 
 
 using namespace std;
@@ -34,12 +34,11 @@ void TileData::setVoid() {
 void TileData::setEmpty() {
     isVoid = false;
     entity = nullptr;
-    hasGarbage = false;
+    hasGarbage = true;
     hasRecycling = false;
 }
 
 Game::Game() {
-    //TODO: place enemies and player on map
     enemy = new Entity[3];
     player = new Entity;
     tickNum = 0;
@@ -62,10 +61,10 @@ Game::~Game() {
 
 void Game::printMap() {
     //TODO: Render to window
+    //remember endscreen in kill()
+    //remember some sort of intro screen before game launch
 
     clear();
-
-    //TODO: colors
 
     printw("#  #  #  #  #  #  #  #  #  #  #  #  #\n");
     for (auto &i: Map) {
@@ -89,7 +88,14 @@ void Game::printMap() {
                     attroff(COLOR_PAIR(MAGENTA)); // disable color pair 3
                     attroff(COLOR_PAIR(CYAN)); // disable color pair 4
                 } else if (!i[j].isVoid) {
-                    printw("   ");
+                    if (!i[j].hasGarbage) {
+                        printw("   ");
+                    } else {
+                        attron(COLOR_PAIR(YELLOW));
+                        printw(" * ");
+                        attroff(COLOR_PAIR(YELLOW));
+                    }
+
                 }
             } else {
                 if (j == -1) printw("# ");
@@ -108,21 +114,26 @@ void Game::generateLevel() {
     // -1 = void
     TileData voidTile;
     voidTile.setVoid();
+
     // 0 = empty
     TileData emptyTile;
     emptyTile.setEmpty();
+
     // 1 = player
     TileData playerTile;
     playerTile.setEmpty();
     playerTile.entity = player;
+
     // 7 = enemy1
     TileData enemyTile1;
     enemyTile1.setEmpty();
     enemyTile1.entity = &enemy[0];
+
     //8 = enemy2
     TileData enemyTile2;
     enemyTile2.setEmpty();
     enemyTile2.entity = &enemy[1];
+
     //9 = enemy3
     TileData enemyTile3;
     enemyTile3.setEmpty();
@@ -134,7 +145,7 @@ void Game::generateLevel() {
                              {0,  0,  -1, 0,  -1, 0,  -1, 0,  -1, 0,  0},
                              {-1, 0,  0,  0,  0,  0,  0,  0,  0,  0,  -1},
                              {-1, -1, 0,  -1, -1, -1, -1, -1, 0,  -1, -1},
-                             {0,  0,  7,  -1, 0,  8,  9,  -1, 0,  0,  0},
+                             {0,  0,  0,  -1, 7,  8,  9,  -1, 0,  0,  0},
                              {-1, -1, 0,  -1, -1, -1, -1, -1, 0,  -1, -1},
                              {-1, 0,  0,  0,  0,  0,  0,  0,  0,  0,  -1},
                              {0,  0,  -1, 0,  -1, 0,  -1, 0,  -1, 0,  0},
@@ -145,8 +156,10 @@ void Game::generateLevel() {
     for (int i = 0; i < xsize; i++) {
         for (int j = 0; j < ysize; j++) {
             if (arr[i][j] == -1) Map[i][j] = voidTile;
-            else if (arr[i][j] == 0) Map[i][j] = emptyTile;
-            else if (arr[i][j] == 1) {
+            else if (arr[i][j] == 0) {
+                Map[i][j] = emptyTile;
+                remainingGarbage++;
+            } else if (arr[i][j] == 1) {
                 Map[i][j] = playerTile;
                 Position newPos(i, j);
                 Map[i][j].entity->pos = newPos;
@@ -163,9 +176,12 @@ void Game::generateLevel() {
                 Position newPos(i, j);
                 Map[i][j].entity->pos = newPos;
             }
+            //place garbage
         }
 
     }
+
+
 }
 
 bool validateCharMov(char check) {
@@ -220,12 +236,9 @@ void Game::moveEntity(Entity *entity, char curr) {
     if (Map[newx][newy].isVoid) {
         return;
     }
+    //check collision
+
     Map[xpos][ypos].entity = nullptr;
-    if (entity->id != "player") {
-        if (Map[newx][newy].entity->id == "player") {
-            kill();
-        }
-    }
     Map[newx][newy].entity = entity;
     Position newPos(newx, newy);
     entity->pos = newPos;
@@ -234,25 +247,29 @@ void Game::moveEntity(Entity *entity, char curr) {
         if (Map[newx][newy].hasGarbage) {
             score += 10;
             Map[newx][newy].hasGarbage = false;
+            remainingGarbage--;
+            if (remainingGarbage == 0) {
+                tickNum = 0;
+                generateLevel();
+            }
         }
-
     }
-
-    //TODO: collisionlogic?
 }
 
 void Game::moveEntity(Entity *entity, Position newpos) {
-    int difference = abs(entity->pos.x - newpos.x) + abs(entity->pos.y - newpos.y);
-    if (difference < 2) {
-        Map[entity->pos.x][entity->pos.y].entity = nullptr;
-        entity->pos = newpos;
+    int distance = abs(entity->pos.x - newpos.x) + abs(entity->pos.y - newpos.y);
+    if (distance > 1) {
+        return;
+    }
+    if (Map[newpos.x][newpos.y].entity != nullptr) {
         if (Map[newpos.x][newpos.y].entity == player) {
             kill();
         }
-        Map[entity->pos.x][entity->pos.y].entity = entity;
-    } else {
-        fullExit();
+        return;
     }
+    Map[entity->pos.x][entity->pos.y].entity = nullptr;
+    entity->pos = newpos;
+    Map[entity->pos.x][entity->pos.y].entity = entity;
 }
 
 bool isValidInput(char input) {
@@ -321,31 +338,65 @@ void Game::tick() {
             Map[enemy[0].pos.x][enemy[0].pos.y].entity = nullptr;
             enemy[0].pos = outOfBox;
             Map[outOfBox.x][outOfBox.y].entity = &enemy[0];
+            enemy[0].deathlength = 0;
+            enemy[0].dead = false;
         } else if (tickNum == 12) {
             Map[enemy[1].pos.x][enemy[1].pos.y].entity = nullptr;
             enemy[1].pos = outOfBox;
             Map[outOfBox.x][outOfBox.y].entity = &enemy[1];
-        } else if (tickNum == ) {
+        } else if (tickNum == 21) {
             Map[enemy[2].pos.x][enemy[2].pos.y].entity = nullptr;
             enemy[2].pos = outOfBox;
             Map[outOfBox.x][outOfBox.y].entity = &enemy[2];
         }
-        for (int i = 0; i < 3; i++) {
+
+        //move enemies
+        if (!enemy[0].dead) {
             vector<Position> path;
-            path = a_star(player->pos, enemy[i].pos, Map);
+            path = a_star(enemy[0].pos, player->pos, Map);
             //vector is sorted start --> end
-            if (path.size() > 2) {
-                moveEntity(&enemy[i], path[1]);
+            if (!path.empty()) {
+                moveEntity(&enemy[0], path[1]);
             }
-            //TODO: verify that pathfinding works
+        } else {
+            enemy[0].deathlength++;
+            if (enemy[0].deathlength > 10) {
+                Position respawn(0, 0);
+                Map[enemy[0].pos.x][enemy[0].pos.y].entity = nullptr;
+                enemy[0].pos = respawn;
+                Map[respawn.x][respawn.y].entity = &enemy[0];
+                enemy[0].deathlength = 0;
+                enemy[0].dead = false;
+            }
+        }
+        if (!enemy[1].dead) {
+            //TODO: pathfining for 2
+        } else {
+            enemy[1].deathlength++;
+            if (enemy[1].deathlength > 10) {
+                Position respawn(0, 10);
+                Map[enemy[1].pos.x][enemy[1].pos.y].entity = nullptr;
+                enemy[1].pos = respawn;
+                Map[respawn.x][respawn.y].entity = &enemy[1];
+                enemy[1].deathlength = 0;
+                enemy[1].dead = false;
+            }
+        }
+        if (!enemy[2].dead) {
+            //TODO: pathfinding for 3
+        } else {
+            enemy[2].deathlength++;
+            if (enemy[2].deathlength > 10) {
+                Position respawn(10, 0);
+                Map[enemy[2].pos.x][enemy[0].pos.y].entity = nullptr;
+                enemy[2].pos = respawn;
+                Map[respawn.x][respawn.y].entity = &enemy[2];
+                enemy[2].deathlength = 0;
+                enemy[2].dead = false;
+            }
         }
     }
-
-
     tickNum++;
-
-
-    //TODO:finish tick function (what do I mean by this)
 }
 
 void Game::movePlayer(char input) {
@@ -357,7 +408,7 @@ void Game::kill() {
     system("clear");
     cout << "You Died!\n========\nYour Score: " << score << "\n";
     this_thread::sleep_for(chrono::seconds(2));
-    //TODO: print endscreen
+    //TODO: add endscreen (render)
     endwin(); // end ncurses mode
     exit(1);
 }

@@ -6,17 +6,19 @@
 #define TRASHMAN_GAME_H
 
 #include <string>
-#include "Pathfinding.h"
+#include "aStar.h"
 
 using namespace std;
 
 struct Position {
     int x;
     int y;
+
     Position(int x_, int y_) {
         x = x_;
         y = y_;
     }
+
     Position() = default;
 };
 
@@ -26,6 +28,7 @@ struct Entity {
     Position pos;
     string id;
     int deathlength;
+    bool dead;
     char prevMove;
     // player == player
     //ghost 1 == 1
@@ -33,11 +36,18 @@ struct Entity {
     //ghost 3 == 3
 };
 
+struct Pathfinding {
+    AStarNode aStarNode;
+    //somthing else?
+};
+
 struct TileData {
+    int x, y;
     bool isVoid;
 
     Entity *entity = nullptr;
 
+    Pathfinding pathfinding;
 
     bool hasGarbage;
 
@@ -56,7 +66,7 @@ struct TileData {
 class Game {
 private:
 
-    //TODO:lives?
+
     int tickNum;
     TileData Map[xsize][ysize];
     Entity *enemy;
@@ -72,6 +82,7 @@ private:
      * 4th Ghost = 1600 Pts
      */
     int score;
+    int remainingGarbage;
 
 public:
 
@@ -82,6 +93,7 @@ public:
     void printMap();
 
     void moveEntity(Entity *entity, char curr);
+
     void moveEntity(Entity *entity, Position);
 
     void generateLevel();
