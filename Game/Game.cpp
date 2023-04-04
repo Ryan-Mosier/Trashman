@@ -451,6 +451,7 @@ void Game::tick() {
             }
         }
         if (!enemy[1].dead) {
+            //TODO: fix pathfinding
             vector<Position> path;
             path = a_star(enemy[1].pos, predictPosition(player, player->prevMove), Map);
             if (!path.empty()) {
@@ -469,7 +470,7 @@ void Game::tick() {
             }
         }
         if (!enemy[2].dead) {
-            //TODO: pathfinding for 3
+            //TODO: fix pathfinding
             int distance = calcDistance(&enemy[2].pos, &player->pos);
             if (distance < 4) {
                 vector<Position> path;

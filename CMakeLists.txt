@@ -18,3 +18,9 @@ target_link_libraries(Debug Game)
 # Experimental executable
 add_executable(Experimental test.cpp)
 target_link_libraries(Experimental Game)
+
+set(BIN_DIR ${CMAKE_CURRENT_BINARY_DIR})
+
+file(RENAME ${BIN_DIR}/Release ${BIN_DIR}/../Release)
+file(RENAME ${BIN_DIR}/Debug ${BIN_DIR}/../Debug)
+file(RENAME ${BIN_DIR}/Experimental ${BIN_DIR}/../Experimental)

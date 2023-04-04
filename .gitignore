@@ -3,3 +3,8 @@
 test.cpp
 test
 .idea
+
+# binary files
+Debug
+Release
+Experimental
