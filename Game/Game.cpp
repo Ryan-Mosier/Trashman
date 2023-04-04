@@ -335,7 +335,7 @@ Position Game::predictPosition(Entity *entity, char prev) {
         xpos = newx;
         ypos = newy;
     }
-    return {xpos,ypos};
+    return {xpos, ypos};
 }
 
 bool isValidInput(char input) {
@@ -416,7 +416,7 @@ void Game::tick() {
             enemy[0].dead = false;
         } else if (tickNum == 12) {
             //TODO: work out edge cases and copy this
-            if (Map[outOfBox.x][outOfBox.y].entity == nullptr){
+            if (Map[outOfBox.x][outOfBox.y].entity == nullptr) {
                 Map[enemy[1].pos.x][enemy[1].pos.y].entity = nullptr;
                 enemy[1].pos = outOfBox;
                 Map[outOfBox.x][outOfBox.y].entity = &enemy[1];
@@ -451,8 +451,12 @@ void Game::tick() {
             }
         }
         if (!enemy[1].dead) {
+            vector<Position> path;
+            path = a_star(enemy[1].pos, predictPosition(player, player->prevMove), Map);
+            if (!path.empty()) {
+                moveEntity(&enemy[0], path[1]);
+            }
 
-            //TODO: pathfining for 2
         } else {
             enemy[1].deathlength++;
             if (enemy[1].deathlength > 10) {
