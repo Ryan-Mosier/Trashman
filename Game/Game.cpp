@@ -470,6 +470,28 @@ void Game::tick() {
         }
         if (!enemy[2].dead) {
             //TODO: pathfinding for 3
+            int distance = calcDistance(&enemy[2].pos, &player->pos);
+            if (distance < 4) {
+                vector<Position> path;
+
+                path = a_star(enemy[2].pos, player->pos, Map);
+                //vector is sorted start --> end
+                if (!path.empty()) {
+                    moveEntity(&enemy[2], path[1]);
+                }
+            } else {
+                vector<Position> possible;
+                for (int i = -1; i <= 1; i++) {
+                    for (int j = -1; j <= 1; j++) {
+                        if (abs(i) == abs(j)) continue;
+                        if (i == 0 && j == 0) continue;
+                        if (enemy->pos.x + i < 0 || enemy->pos.x + i >= xsize || enemy->pos.y + j < 0 || enemy->pos.y + j >= ysize) continue;
+                        possible.emplace_back(enemy[2].pos.x + i, enemy[2].pos.y + j);
+                    }
+                }
+                int random = rand() % int(possible.size());
+                moveEntity(&enemy[2], possible[random]);
+            }
         } else {
             enemy[2].deathlength++;
             if (enemy[2].deathlength > 10) {

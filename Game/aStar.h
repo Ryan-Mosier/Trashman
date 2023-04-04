@@ -15,6 +15,7 @@ static const int xsize = 11, ysize = 11;
 
 
 int calcDistance(AStarNode *node1, AStarNode *node2);
+int calcDistance(Position *node1, Position *node2);
 
 std::vector<Position> a_star(Position startpos, Position goalpos, TileData grid[xsize][ysize]);
 

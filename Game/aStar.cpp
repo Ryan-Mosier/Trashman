@@ -16,6 +16,11 @@ int calcDistance(AStarNode *node1, AStarNode *node2) {
     return abs(node1->position.x - node2->position.x) + abs(node1->position.y - node2->position.y);
 }
 
+int calcDistance(Position *node1, Position *node2) {
+    return abs(node1->x - node2->x) + abs(node1->y - node2->y);
+}
+
+
 void convertMap(Position startpos, Position goalpos, TileData map[xsize][ysize], TileData *&start, TileData *&goal) {
 
     goal = &map[goalpos.x][goalpos.y];
