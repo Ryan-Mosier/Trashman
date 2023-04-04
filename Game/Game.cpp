@@ -13,6 +13,7 @@
 #include <thread>
 #include <unistd.h>
 #include "aStar.h"
+#include "debugValues.h"
 
 
 using namespace std;
@@ -24,21 +25,13 @@ void fullExit() {
     exit(42);
 }
 
-void TileData::setVoid() {
-    isVoid = true;
-    entity = nullptr;
-    hasGarbage = false;
-    hasRecycling = false;
-}
-
-void TileData::setEmpty() {
-    isVoid = false;
-    entity = nullptr;
-    hasGarbage = true;
-    hasRecycling = false;
-}
 
 Game::Game() {
+    for (int i = 0; i < xsize; i++) {
+        for (int j = 0; j < ysize; j++) {
+            Map[i][j] = TileData(i, j);
+        }
+    }
     enemy = new Entity[3];
     player = new Entity;
     tickNum = 0;
@@ -59,7 +52,51 @@ Game::~Game() {
     delete player;
 }
 
+void Game::DebugprintMap() {
+    system("clear");
+    cout << "#  #  #  #  #  #  #  #  #  #  #  #  #\n";
+    for (auto &i: Map) {
+        for (int j = -1; j < xsize + 1; j++) {
+            if (j != -1 && j != xsize) {
+                if (i[j].isVoid) {
+                    cout << " # ";
+                } else if (i[j].entity != nullptr) {
+                    if (i[j].entity->id == "player") {
+                        cout << "\033[33m"; //YELLOW
+                    } else if (i[j].entity->id == "1") {
+                        cout << "\033[31m"; //RED
+                    } else if (i[j].entity->id == "2") {
+                        cout << "\033[35m"; //MAGENTA
+                    } else if (i[j].entity->id == "3") {
+                        cout << "\033[36m"; //CYAN
+                    }
+                    cout << " @ ";
+                    cout << "\033[0m";
+                } else if (!i[j].isVoid) {
+                    if (!i[j].hasGarbage) {
+                        cout << "   ";
+                    } else {
+                        cout << " * ";
+                    }
+
+                }
+            } else {
+                if (j == -1) cout << "# ";
+                else cout << " #";
+            }
+        }
+        cout << "\n";
+    }
+    cout << "#  #  #  #  #  #  #  #  #  #  #  #  #\n";
+}
+
 void Game::printMap() {
+
+    if (debug) {
+        DebugprintMap();
+        return;
+    }
+
     //TODO: Render to window
     //remember endscreen in kill()
     //remember some sort of intro screen before game launch
@@ -124,20 +161,7 @@ void Game::generateLevel() {
     playerTile.setEmpty();
     playerTile.entity = player;
 
-    // 7 = enemy1
-    TileData enemyTile1;
-    enemyTile1.setEmpty();
-    enemyTile1.entity = &enemy[0];
 
-    //8 = enemy2
-    TileData enemyTile2;
-    enemyTile2.setEmpty();
-    enemyTile2.entity = &enemy[1];
-
-    //9 = enemy3
-    TileData enemyTile3;
-    enemyTile3.setEmpty();
-    enemyTile3.entity = &enemy[2];
     /*#endregion */
 
     int arr[xsize][ysize] = {{1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0},
@@ -155,26 +179,27 @@ void Game::generateLevel() {
 
     for (int i = 0; i < xsize; i++) {
         for (int j = 0; j < ysize; j++) {
-            if (arr[i][j] == -1) Map[i][j] = voidTile;
+            if (arr[i][j] == -1) Map[i][j].setVoid();
             else if (arr[i][j] == 0) {
-                Map[i][j] = emptyTile;
+                Map[i][j].setEmpty();
                 remainingGarbage++;
             } else if (arr[i][j] == 1) {
-                Map[i][j] = playerTile;
-                Position newPos(i, j);
-                Map[i][j].entity->pos = newPos;
+                Map[i][j].setEmpty();
+                Map[i][j].entity = player;
+                Map[i][j].entity->pos = Map[i][j].pos;
+
             } else if (arr[i][j] == 7) {
-                Map[i][j] = enemyTile1;
-                Position newPos(i, j);
-                Map[i][j].entity->pos = newPos;
+                Map[i][j].setEmpty();
+                Map[i][j].entity = &enemy[0];
+                Map[i][j].entity->pos = Map[i][j].pos;
             } else if (arr[i][j] == 8) {
-                Map[i][j] = enemyTile2;
-                Position newPos(i, j);
-                Map[i][j].entity->pos = newPos;
+                Map[i][j].setEmpty();
+                Map[i][j].entity = &enemy[1];
+                Map[i][j].entity->pos = Map[i][j].pos;
             } else if (arr[i][j] == 9) {
-                Map[i][j] = enemyTile3;
-                Position newPos(i, j);
-                Map[i][j].entity->pos = newPos;
+                Map[i][j].setEmpty();
+                Map[i][j].entity = &enemy[2];
+                Map[i][j].entity->pos = Map[i][j].pos;
             }
             //place garbage
         }
@@ -272,6 +297,47 @@ void Game::moveEntity(Entity *entity, Position newpos) {
     Map[entity->pos.x][entity->pos.y].entity = entity;
 }
 
+Position Game::predictPosition(Entity *entity, char prev) {
+    int xpos = entity->pos.x, ypos = entity->pos.y;
+    for (int i = 0; i < 4; i++) {
+        int newx = xpos, newy = ypos;
+        if (entity->prevMove == 'w') {
+            newx--;
+        } else if (entity->prevMove == 's') {
+            newx++;
+        } else if (entity->prevMove == 'a') {
+            newy--;
+        } else if (entity->prevMove == 'd') {
+            newy++;
+        }
+
+        if ((entity->prevMove == 'a') && (xpos == 5) && (ypos == 0)) {
+            newx = 5;
+            newy = 10;
+        } else if ((entity->prevMove == 'd') && (xpos == 5) && (ypos == 10)) {
+            newx = 5;
+            newy = 0;
+        }
+
+        if (newy > 10) {
+            newy = 10;
+        } else if (newy < 0) {
+            newy = 0;
+        } else if (newx > 10) {
+            newx = 10;
+        } else if (newx < 0) {
+            newx = 0;
+        }
+
+        if (Map[newx][newy].isVoid) {
+            break;
+        }
+        xpos = newx;
+        ypos = newy;
+    }
+    return {xpos,ypos};
+}
+
 bool isValidInput(char input) {
     std::unordered_set<char> validInputs = {'w', 'a', 's', 'd', 'k'};
     return (validInputs.find(input) != validInputs.end());
@@ -280,6 +346,16 @@ bool isValidInput(char input) {
 std::vector<char> getPressedKeys() {
     std::vector<char> keys;
     char ch;
+    if (debug) {
+        char ch = '\0';
+        while (!isValidInput(ch)) {
+            cin.clear();
+            cin >> ch;
+        }
+        keys.push_back(ch);
+        return keys;
+    }
+
 
     nodelay(stdscr, true); // don't restart the timeout everytime a key is pressed
 
@@ -326,24 +402,25 @@ void Game::tick() {
         moveEntity(player, in);
     } else if (tickNum % 2 == 0) {
         in = findLatestValidKey(getPressedKeys());
-    }
-
-    if (tickNum % 2 == 0) {
         moveEntity(player, in);
     }
 
     if (tickNum % 3 == 0) {
         Position outOfBox(5, 2);
         if (tickNum == 3) {
+
             Map[enemy[0].pos.x][enemy[0].pos.y].entity = nullptr;
             enemy[0].pos = outOfBox;
             Map[outOfBox.x][outOfBox.y].entity = &enemy[0];
             enemy[0].deathlength = 0;
             enemy[0].dead = false;
         } else if (tickNum == 12) {
-            Map[enemy[1].pos.x][enemy[1].pos.y].entity = nullptr;
-            enemy[1].pos = outOfBox;
-            Map[outOfBox.x][outOfBox.y].entity = &enemy[1];
+            //TODO: work out edge cases and copy this
+            if (Map[outOfBox.x][outOfBox.y].entity == nullptr){
+                Map[enemy[1].pos.x][enemy[1].pos.y].entity = nullptr;
+                enemy[1].pos = outOfBox;
+                Map[outOfBox.x][outOfBox.y].entity = &enemy[1];
+            }
         } else if (tickNum == 21) {
             Map[enemy[2].pos.x][enemy[2].pos.y].entity = nullptr;
             enemy[2].pos = outOfBox;
@@ -353,7 +430,11 @@ void Game::tick() {
         //move enemies
         if (!enemy[0].dead) {
             vector<Position> path;
+
             path = a_star(enemy[0].pos, player->pos, Map);
+            if (debug) {
+                debugPath = path;
+            }
             //vector is sorted start --> end
             if (!path.empty()) {
                 moveEntity(&enemy[0], path[1]);
@@ -370,6 +451,7 @@ void Game::tick() {
             }
         }
         if (!enemy[1].dead) {
+
             //TODO: pathfining for 2
         } else {
             enemy[1].deathlength++;

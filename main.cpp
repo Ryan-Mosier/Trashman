@@ -2,11 +2,16 @@
 #include "Game/Game.h"
 #include <ncurses.h>
 #include "Game/colors.h"
+#include "Game/debugValues.h"
 
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "EndlessLoop"
 
+bool debug;
+vector<Position> debugPath;
+
 int main() {
+    debug = false;
     initscr(); // initialize ncurses
     cbreak(); // set keyboard input to immediate mode
     noecho(); // don't echo input characters to the screen

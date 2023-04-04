@@ -1,17 +1,8 @@
-#include <iostream>
+#include "Game/Game.h"
 #include <ncurses.h>
+#include "Game/colors.h"
 
 int main() {
-    initscr(); // initialize ncurses
-    cbreak(); // set keyboard input to immediate mode
-    noecho(); // don't echo input characters to the screen
-
-    if(!has_colors()){
-        std::cout << "No colors :(\n";
-    }else{
-        std::cout << "Colors!\n";
-    }
-
-    endwin(); // end ncurses mode
-    return 0;
+    Game g;
+    g.tick();
 }

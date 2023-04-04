@@ -11,18 +11,10 @@ static const int xsize = 11, ysize = 11;
 #include <vector>
 #include <cmath>
 #include "Game.h"
+#include "Structures.h"
 
-struct AStarNode{
-    int f_cost, g_cost, h_cost;
-    bool obstacle;
-    //f is g+h
-    //g is distance from start
-    //h is estimated distance from goal
 
-    AStarNode* parent;
-};
-
-int distance(AStarNode* node1, AStarNode* node2);
+int calcDistance(AStarNode *node1, AStarNode *node2);
 
 std::vector<Position> a_star(Position startpos, Position goalpos, TileData grid[xsize][ysize]);
 
