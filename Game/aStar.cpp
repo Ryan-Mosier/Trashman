@@ -66,7 +66,6 @@ std::vector<Position> convertPath(std::vector<AStarNode *> in) {
 }
 
 std::vector<Position> a_star(Position startpos, Position goalpos, TileData map[xsize][ysize]) {
-    //TODO:convert to work with new data structs
     TileData *start;
     TileData *goal;
     convertMap(startpos, goalpos, map, start, goal);

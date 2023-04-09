@@ -298,44 +298,38 @@ void Game::moveEntity(Entity *entity, Position newpos) {
 }
 
 Position Game::predictPosition(Entity *entity, char prev) {
-    int xpos = entity->pos.x, ypos = entity->pos.y;
+    Position currPos = entity->pos;
+    Position newPos = entity->pos;
+
     for (int i = 0; i < 4; i++) {
-        int newx = xpos, newy = ypos;
+        //adjust newPos
         if (entity->prevMove == 'w') {
-            newx--;
+            newPos.x--;
         } else if (entity->prevMove == 's') {
-            newx++;
+            newPos.x++;
         } else if (entity->prevMove == 'a') {
-            newy--;
+            newPos.y--;
         } else if (entity->prevMove == 'd') {
-            newy++;
+            newPos.y++;
         }
 
-        if ((entity->prevMove == 'a') && (xpos == 5) && (ypos == 0)) {
-            newx = 5;
-            newy = 10;
-        } else if ((entity->prevMove == 'd') && (xpos == 5) && (ypos == 10)) {
-            newx = 5;
-            newy = 0;
+        //check bounds
+        if (newPos.y > ysize - 1) {
+            newPos.y = ysize - 1;
+        } else if (newPos.y < 0) {
+            newPos.y = 0;
+        } else if (newPos.x > xsize - 1) {
+            newPos.x = xsize - 1;
+        } else if (newPos.x < 0) {
+            newPos.x = 0;
         }
 
-        if (newy > 10) {
-            newy = 10;
-        } else if (newy < 0) {
-            newy = 0;
-        } else if (newx > 10) {
-            newx = 10;
-        } else if (newx < 0) {
-            newx = 0;
-        }
-
-        if (Map[newx][newy].isVoid) {
+        if (Map[newPos.x][newPos.y].isVoid) {
             break;
         }
-        xpos = newx;
-        ypos = newy;
+        currPos = newPos;
     }
-    return {xpos, ypos};
+    return currPos;
 }
 
 bool isValidInput(char input) {
@@ -403,41 +397,49 @@ void Game::tick() {
     } else if (tickNum % 2 == 0) {
         in = findLatestValidKey(getPressedKeys());
         moveEntity(player, in);
+        entityPos[0] = player->pos;
     }
 
-    if (tickNum % 3 == 0) {
+    if (tickNum % 4 == 0) {
         Position outOfBox(5, 2);
-        if (tickNum == 3) {
 
-            Map[enemy[0].pos.x][enemy[0].pos.y].entity = nullptr;
-            enemy[0].pos = outOfBox;
-            Map[outOfBox.x][outOfBox.y].entity = &enemy[0];
-            enemy[0].deathlength = 0;
-            enemy[0].dead = false;
-        } else if (tickNum == 12) {
-            //TODO: work out edge cases and copy this
-            if (Map[outOfBox.x][outOfBox.y].entity == nullptr) {
-                Map[enemy[1].pos.x][enemy[1].pos.y].entity = nullptr;
-                enemy[1].pos = outOfBox;
-                Map[outOfBox.x][outOfBox.y].entity = &enemy[1];
+        //first time spawns
+        if (tickNum < 30) {
+            if (tickNum == 4) {
+
+                Map[enemy[0].pos.x][enemy[0].pos.y].entity = nullptr;
+                enemy[0].pos = outOfBox;
+                Map[outOfBox.x][outOfBox.y].entity = &enemy[0];
+                enemy[0].deathlength = 0;
+                enemy[0].dead = false;
+            } else if (tickNum == 16) {
+                if (Map[outOfBox.x][outOfBox.y].entity == nullptr) {
+                    Map[enemy[1].pos.x][enemy[1].pos.y].entity = nullptr;
+                    enemy[1].pos = outOfBox;
+                    Map[outOfBox.x][outOfBox.y].entity = &enemy[1];
+                }
+            } else if (tickNum == 28) {
+                Map[enemy[2].pos.x][enemy[2].pos.y].entity = nullptr;
+                enemy[2].pos = outOfBox;
+                Map[outOfBox.x][outOfBox.y].entity = &enemy[2];
             }
-        } else if (tickNum == 21) {
-            Map[enemy[2].pos.x][enemy[2].pos.y].entity = nullptr;
-            enemy[2].pos = outOfBox;
-            Map[outOfBox.x][outOfBox.y].entity = &enemy[2];
         }
 
         //move enemies
         if (!enemy[0].dead) {
             vector<Position> path;
 
+            //TODO:power pellets?!
+
             path = a_star(enemy[0].pos, player->pos, Map);
-            if (debug) {
-                debugPath = path;
-            }
             //vector is sorted start --> end
             if (!path.empty()) {
                 moveEntity(&enemy[0], path[1]);
+            }
+
+            if (debug) {
+                debugPath[0] = path;
+                entityPos[1] = enemy[0].pos;
             }
         } else {
             enemy[0].deathlength++;
@@ -451,11 +453,16 @@ void Game::tick() {
             }
         }
         if (!enemy[1].dead) {
-            //TODO: fix pathfinding
             vector<Position> path;
             path = a_star(enemy[1].pos, predictPosition(player, player->prevMove), Map);
             if (!path.empty()) {
-                moveEntity(&enemy[0], path[1]);
+                moveEntity(&enemy[1], path[1]);
+            }
+
+
+            if (debug) {
+                debugPath[1] = path;
+                entityPos[2] = enemy[1].pos;
             }
 
         } else {
@@ -470,28 +477,45 @@ void Game::tick() {
             }
         }
         if (!enemy[2].dead) {
-            //TODO: fix pathfinding
             int distance = calcDistance(&enemy[2].pos, &player->pos);
-            if (distance < 4) {
-                vector<Position> path;
-
+            vector<Position> path;
+            if (distance < 6) {
                 path = a_star(enemy[2].pos, player->pos, Map);
                 //vector is sorted start --> end
                 if (!path.empty()) {
                     moveEntity(&enemy[2], path[1]);
                 }
+
             } else {
                 vector<Position> possible;
                 for (int i = -1; i <= 1; i++) {
                     for (int j = -1; j <= 1; j++) {
                         if (abs(i) == abs(j)) continue;
                         if (i == 0 && j == 0) continue;
-                        if (enemy->pos.x + i < 0 || enemy->pos.x + i >= xsize || enemy->pos.y + j < 0 || enemy->pos.y + j >= ysize) continue;
+                        Position pos(enemy[2].pos.x + i, enemy[2].pos.y + j);
+                        if (pos.x < 0 || pos.x >= xsize || pos.y + j < 0 || pos.y + j >= ysize) continue;
+                        if (Map[pos.x][pos.y].isVoid) continue;
+                        if (Map[pos.x][pos.y].entity != nullptr) continue;
                         possible.emplace_back(enemy[2].pos.x + i, enemy[2].pos.y + j);
                     }
                 }
-                int random = rand() % int(possible.size());
-                moveEntity(&enemy[2], possible[random]);
+                if (!possible.empty()) {
+                    int random = rand() % int(possible.size());
+                    if (debug) {
+                        path = vector<Position>(2);
+                        path[0] = enemy[2].pos;
+                        path[1] = possible[random];
+                    }
+                    moveEntity(&enemy[2], possible[random]);
+                } else if (debug) {
+                    path = vector<Position>(1);
+                    path[0] = enemy[2].pos;
+                }
+
+            }
+            if (debug) {
+                debugPath[2] = path;
+                entityPos[3] = enemy[0].pos;
             }
         } else {
             enemy[2].deathlength++;
@@ -503,6 +527,16 @@ void Game::tick() {
                 enemy[2].deathlength = 0;
                 enemy[2].dead = false;
             }
+        }
+
+        if (enemy[0].dead) {
+            //TODO
+        }
+        if (enemy[1].dead) {
+            //TODO
+        }
+        if (enemy[2].dead) {
+            //TODO
         }
     }
     tickNum++;

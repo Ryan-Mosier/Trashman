@@ -8,7 +8,8 @@
 #pragma ide diagnostic ignored "EndlessLoop"
 
 bool debug;
-vector<Position> debugPath;
+vector<vector<Position>> debugPath(3);
+vector<Position> entityPos(4);
 
 int main() {
     debug = false;
