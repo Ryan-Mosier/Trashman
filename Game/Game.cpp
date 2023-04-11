@@ -34,6 +34,10 @@ Game::Game() {
     }
     enemy = new Entity[3];
     player = new Entity;
+    for (int i = 0; i < 3; i++) {
+        enemy[i].dead = true;
+        enemy[i].deathlength = -1000;
+    }
     tickNum = 0;
     score = 0;
     generateLevel();
@@ -44,7 +48,8 @@ Game::Game() {
     enemy[1].id = "2";
     enemy[2].id = "3";
     /*#endregion*/
-
+    powerPellet = false;
+    remainingPPDuration = 0;
 }
 
 Game::~Game() {
@@ -54,7 +59,7 @@ Game::~Game() {
 
 void Game::DebugprintMap() {
     system("clear");
-    cout << "#  #  #  #  #  #  #  #  #  #  #  #  #\n";
+    cout << "#  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #\n";
     for (auto &i: Map) {
         for (int j = -1; j < xsize + 1; j++) {
             if (j != -1 && j != xsize) {
@@ -76,7 +81,9 @@ void Game::DebugprintMap() {
                     if (!i[j].hasGarbage) {
                         cout << "   ";
                     } else {
+                        cout << "\033[33m";
                         cout << " * ";
+                        cout << "\033[0m";
                     }
 
                 }
@@ -87,7 +94,7 @@ void Game::DebugprintMap() {
         }
         cout << "\n";
     }
-    cout << "#  #  #  #  #  #  #  #  #  #  #  #  #\n";
+    cout << "#  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #\n";
 }
 
 void Game::printMap() {
@@ -103,12 +110,16 @@ void Game::printMap() {
 
     clear();
 
-    printw("#  #  #  #  #  #  #  #  #  #  #  #  #\n");
+    printw("#  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #\n");
     for (auto &i: Map) {
         for (int j = -1; j < xsize + 1; j++) {
             if (j != -1 && j != xsize) {
                 if (i[j].isVoid) {
                     printw(" # ");
+                } else if (i[j].hasPP) {
+                    attron(COLOR_PAIR(GREEN));
+                    printw(" $ ");
+                    attroff(COLOR_PAIR(GREEN));
                 } else if (i[j].entity != nullptr) {
                     if (i[j].entity->id == "player") {
                         attron(COLOR_PAIR(YELLOW)); // enable color pair 1 (YELLOW)
@@ -141,14 +152,20 @@ void Game::printMap() {
         }
         printw("\n");
     }
-    printw("#  #  #  #  #  #  #  #  #  #  #  #  #\n");
+    printw("#  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #\n");
 }
 
 void Game::generateLevel() {
 
     /*#region Tiles*/
 
-    // -1 = void
+    // 3 = PP
+    TileData pp;
+    pp.setEmpty();
+    pp.hasPP = true;
+    pp.hasGarbage = false;
+
+    // 2 = void
     TileData voidTile;
     voidTile.setVoid();
 
@@ -164,23 +181,32 @@ void Game::generateLevel() {
 
     /*#endregion */
 
-    int arr[xsize][ysize] = {{1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0},
-                             {0,  -1, -1, -1, -1, 0,  -1, -1, -1, -1, 0},
-                             {0,  0,  -1, 0,  -1, 0,  -1, 0,  -1, 0,  0},
-                             {-1, 0,  0,  0,  0,  0,  0,  0,  0,  0,  -1},
-                             {-1, -1, 0,  -1, -1, -1, -1, -1, 0,  -1, -1},
-                             {0,  0,  0,  -1, 7,  8,  9,  -1, 0,  0,  0},
-                             {-1, -1, 0,  -1, -1, -1, -1, -1, 0,  -1, -1},
-                             {-1, 0,  0,  0,  0,  0,  0,  0,  0,  0,  -1},
-                             {0,  0,  -1, 0,  -1, 0,  -1, 0,  -1, 0,  0},
-                             {0,  -1, -1, -1, -1, 0,  -1, -1, -1, -1, 0},
-                             {0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0}};
-
+    int arr[xsize][ysize] = {{0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                             {0, 2, 2, 2, 0, 2, 2, 0, 0, 0, 0, 0, 2, 2, 0, 2, 2, 2, 0},
+                             {0, 2, 2, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 2, 2, 0},
+                             {0, 2, 0, 0, 2, 0, 0, 2, 0, 2, 0, 2, 0, 0, 2, 0, 0, 2, 0},
+                             {0, 0, 0, 2, 2, 2, 0, 2, 0, 2, 0, 2, 0, 2, 2, 2, 0, 0, 0},
+                             {2, 0, 0, 0, 2, 3, 0, 2, 0, 2, 0, 2, 0, 3, 2, 0, 0, 0, 2},
+                             {2, 2, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 2, 2},
+                             {2, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 2},
+                             {2, 2, 0, 2, 2, 2, 0, 2, 2, 2, 2, 2, 0, 2, 2, 2, 0, 2, 2},
+                             {0, 0, 0, 0, 0, 0, 0, 2, 7, 8, 9, 2, 0, 0, 0, 0, 0, 0, 0},
+                             {2, 2, 0, 2, 2, 2, 0, 2, 2, 2, 2, 2, 0, 2, 2, 2, 0, 2, 2},
+                             {2, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0},
+                             {2, 2, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                             {2, 0, 0, 0, 2, 3, 0, 2, 0, 2, 0, 2, 0, 3, 2, 0, 0, 0, 0},
+                             {0, 0, 0, 2, 2, 2, 0, 2, 0, 2, 0, 2, 0, 2, 2, 2, 0, 0, 0},
+                             {0, 2, 0, 0, 2, 0, 0, 2, 0, 2, 0, 2, 0, 0, 2, 0, 0, 2, 0},
+                             {0, 2, 2, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 2, 2, 0},
+                             {0, 2, 2, 2, 0, 2, 2, 0, 0, 0, 0, 0, 2, 2, 0, 2, 2, 2, 0},
+                             {0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0}};
 
     for (int i = 0; i < xsize; i++) {
         for (int j = 0; j < ysize; j++) {
-            if (arr[i][j] == -1) Map[i][j].setVoid();
-            else if (arr[i][j] == 0) {
+            if (arr[i][j] == 2) Map[i][j].setVoid();
+            else if (arr[i][j] == 3) {
+                Map[i][j] = pp;
+            } else if (arr[i][j] == 0) {
                 Map[i][j].setEmpty();
                 remainingGarbage++;
             } else if (arr[i][j] == 1) {
@@ -201,9 +227,22 @@ void Game::generateLevel() {
                 Map[i][j].entity = &enemy[2];
                 Map[i][j].entity->pos = Map[i][j].pos;
             }
-            //place garbage
         }
 
+    }
+    while (true) {
+        srand(time(NULL));
+        for (int i = 0; i < 10; i++) {
+            rand();
+        }
+        int r1 = rand() % xsize;
+        int r2 = rand() % ysize;
+        TileData &tile = Map[r1][r2];
+        if (tile.isVoid) continue;
+        if (tile.entity != nullptr) continue;
+        tile.entity = player;
+        player->pos = {r1, r2};
+        break;
     }
 
 
@@ -215,6 +254,11 @@ bool validateCharMov(char check) {
     if (check == 'a') return true;
     if (check == 's') return true;
     if (check == 'd') return true;
+    return false;
+}
+
+bool comparePositions(Position &p1, const Position &p2) {
+    if (p1.x == p2.x && p1.y == p2.y) return true;
     return false;
 }
 
@@ -240,43 +284,80 @@ void Game::moveEntity(Entity *entity, char curr) {
         newy++;
     }
 
-    if ((entity->prevMove == 'a') && (xpos == 5) && (ypos == 0)) {
-        newx = 5;
-        newy = 10;
-    } else if ((entity->prevMove == 'd') && (xpos == 5) && (ypos == 10)) {
-        newx = 5;
-        newy = 0;
+    Position currPos(xpos, ypos);
+    if ((entity->prevMove == 'a') && comparePositions(currPos, leftpass)) {
+        newx = rightpass.x;
+        newy = rightpass.y;
+    } else if ((entity->prevMove == 'd') && comparePositions(currPos, rightpass)) {
+        newx = leftpass.x;
+        newy = leftpass.y;
     }
 
-    if (newy > 10) {
+    if (newy > ysize - 1) {
         newy = 10;
     } else if (newy < 0) {
         newy = 0;
-    } else if (newx > 10) {
+    } else if (newx > xsize - 1) {
         newx = 10;
     } else if (newx < 0) {
         newx = 0;
     }
 
-    if (Map[newx][newy].isVoid) {
+
+    TileData *newLoc = &Map[newx][newy];
+
+    //check collision
+    if (newLoc->isVoid) {
         return;
     }
-    //check collision
+    if (!powerPellet) {
+        if (newLoc->entity != nullptr) {
+            for (int i = 0; i < 3; i++) {
+                if (newLoc->entity == &enemy[i]) {
+                    kill();
+                }
+            }
+        }
+    }
+    if (powerPellet) {
+        if (newLoc->entity != nullptr) {
+            score += 100;
+            for (int i = 0; i < 3; i++) {
+                if (newLoc->entity == &enemy[i]) {
+                    killEnemy(i);
+                }
+            }
+        }
+    }
 
     Map[xpos][ypos].entity = nullptr;
-    Map[newx][newy].entity = entity;
+    newLoc->entity = entity;
     Position newPos(newx, newy);
     entity->pos = newPos;
 
+
     if (entity->id == "player") {
-        if (Map[newx][newy].hasGarbage) {
+        if (newLoc->hasGarbage) {
             score += 10;
-            Map[newx][newy].hasGarbage = false;
+            newLoc->hasGarbage = false;
             remainingGarbage--;
             if (remainingGarbage == 0) {
                 tickNum = 0;
                 generateLevel();
             }
+        }
+        if (powerPellet) {
+            remainingPPDuration--;
+            if (remainingPPDuration < 0) {
+                powerPellet = false;
+                remainingPPDuration = 0;
+            }
+        }
+        if (newLoc->hasPP) {
+            score += 10;
+            newLoc->hasPP = false;
+            powerPellet = true;
+            remainingPPDuration = 10;
         }
     }
 }
@@ -288,7 +369,12 @@ void Game::moveEntity(Entity *entity, Position newpos) {
     }
     if (Map[newpos.x][newpos.y].entity != nullptr) {
         if (Map[newpos.x][newpos.y].entity == player) {
-            kill();
+            if (!powerPellet) {
+                kill();
+            }
+            for (int i = 0; i < 3; i++) {
+                if (&enemy[i] == entity) killEnemy(i);
+            }
         }
         return;
     }
@@ -401,24 +487,37 @@ void Game::tick() {
     }
 
     if (tickNum % 4 == 0) {
-        Position outOfBox(5, 2);
+
 
         //first time spawns
         if (tickNum < 30) {
             if (tickNum == 4) {
-
+                while (Map[outOfBox.x][outOfBox.y].entity != nullptr) {
+                    tickNum++;
+                    tick();
+                    printMap();
+                }
                 Map[enemy[0].pos.x][enemy[0].pos.y].entity = nullptr;
                 enemy[0].pos = outOfBox;
                 Map[outOfBox.x][outOfBox.y].entity = &enemy[0];
                 enemy[0].deathlength = 0;
                 enemy[0].dead = false;
             } else if (tickNum == 16) {
-                if (Map[outOfBox.x][outOfBox.y].entity == nullptr) {
-                    Map[enemy[1].pos.x][enemy[1].pos.y].entity = nullptr;
-                    enemy[1].pos = outOfBox;
-                    Map[outOfBox.x][outOfBox.y].entity = &enemy[1];
+                while (Map[outOfBox.x][outOfBox.y].entity != nullptr) {
+                    tickNum++;
+                    tick();
+                    printMap();
                 }
+                Map[enemy[1].pos.x][enemy[1].pos.y].entity = nullptr;
+                enemy[1].pos = outOfBox;
+                Map[outOfBox.x][outOfBox.y].entity = &enemy[1];
+
             } else if (tickNum == 28) {
+                while (Map[outOfBox.x][outOfBox.y].entity != nullptr) {
+                    tickNum++;
+                    tick();
+                    printMap();
+                }
                 Map[enemy[2].pos.x][enemy[2].pos.y].entity = nullptr;
                 enemy[2].pos = outOfBox;
                 Map[outOfBox.x][outOfBox.y].entity = &enemy[2];
@@ -444,16 +543,16 @@ void Game::tick() {
         } else {
             enemy[0].deathlength++;
             if (enemy[0].deathlength > 10) {
-                Position respawn(0, 0);
                 Map[enemy[0].pos.x][enemy[0].pos.y].entity = nullptr;
-                enemy[0].pos = respawn;
-                Map[respawn.x][respawn.y].entity = &enemy[0];
+                enemy[0].pos = outOfBox;
+                Map[outOfBox.x][outOfBox.y].entity = &enemy[0];
                 enemy[0].deathlength = 0;
                 enemy[0].dead = false;
             }
         }
         if (!enemy[1].dead) {
             vector<Position> path;
+
             path = a_star(enemy[1].pos, predictPosition(player, player->prevMove), Map);
             if (!path.empty()) {
                 moveEntity(&enemy[1], path[1]);
@@ -468,10 +567,9 @@ void Game::tick() {
         } else {
             enemy[1].deathlength++;
             if (enemy[1].deathlength > 10) {
-                Position respawn(0, 10);
                 Map[enemy[1].pos.x][enemy[1].pos.y].entity = nullptr;
-                enemy[1].pos = respawn;
-                Map[respawn.x][respawn.y].entity = &enemy[1];
+                enemy[1].pos = outOfBox;
+                Map[outOfBox.x][outOfBox.y].entity = &enemy[1];
                 enemy[1].deathlength = 0;
                 enemy[1].dead = false;
             }
@@ -520,32 +618,16 @@ void Game::tick() {
         } else {
             enemy[2].deathlength++;
             if (enemy[2].deathlength > 10) {
-                Position respawn(10, 0);
                 Map[enemy[2].pos.x][enemy[0].pos.y].entity = nullptr;
-                enemy[2].pos = respawn;
-                Map[respawn.x][respawn.y].entity = &enemy[2];
+                enemy[2].pos = outOfBox;
+                Map[outOfBox.x][outOfBox.y].entity = &enemy[2];
                 enemy[2].deathlength = 0;
                 enemy[2].dead = false;
             }
         }
-
-        if (enemy[0].dead) {
-            //TODO
-        }
-        if (enemy[1].dead) {
-            //TODO
-        }
-        if (enemy[2].dead) {
-            //TODO
-        }
     }
     tickNum++;
 }
-
-void Game::movePlayer(char input) {
-    moveEntity(player, input);
-}
-
 
 void Game::kill() {
     system("clear");
@@ -554,4 +636,23 @@ void Game::kill() {
     //TODO: add endscreen (render)
     endwin(); // end ncurses mode
     exit(1);
+}
+
+void Game::killEnemy(int i) {
+    Entity *curr = &enemy[i];
+    score += (i + 1) * 1000;
+    curr->dead = true;
+    curr->deathlength = 0;
+    Map[curr->pos.x][curr->pos.y].entity = nullptr;
+    TileData *currTile;
+    int x, y;
+    for (i = 0; i < 3; i++) {
+        x = enemyBox[i].x;
+        y = enemyBox[i].y;
+        currTile = &Map[x][y];
+        if (currTile->entity != nullptr) continue;
+        break;
+    }
+    currTile->entity = curr;
+    curr->pos = {x, y};
 }

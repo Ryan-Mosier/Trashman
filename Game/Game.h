@@ -34,6 +34,8 @@ private:
 
     int score;
     int remainingGarbage;
+    bool powerPellet;
+    int remainingPPDuration;
 
 public:
 
@@ -53,7 +55,7 @@ public:
 
     void generateLevel();
 
-    void movePlayer(char input);
+    void killEnemy(int i);
 
     void tick();
 

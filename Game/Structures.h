@@ -15,7 +15,6 @@ struct Position;
 struct Entity;
 struct TileData;
 
-
 using namespace std;
 
 struct Position {
@@ -66,7 +65,7 @@ struct TileData {
 
     bool isVoid;
     bool hasGarbage;
-    bool hasRecycling;
+    bool hasPP;
 
     AStarNode aStarNode = AStarNode();
 
@@ -89,6 +88,16 @@ struct TileData {
     // garbage is the pellets
     // recycling is the cherry
 };
+
+//Global Variables
+static const int xsize = 19, ysize = 19;
+static const Position outOfBox(9, 6);
+static const Position topLeft(0, 0), topRight(0, ysize - 1);
+static const Position bottomLeft(xsize - 1, 0), bottomRight(xsize - 1, ysize - 1);
+static const Position leftpass(9, 0), rightpass(9, xsize - 1);
+static const Position enemyBox[3] = {{9, 8},
+                                     {9, 9},
+                                     {9, 10}};
 
 //AStarNode::AStarNode() {
 //    position = Position(0,0);

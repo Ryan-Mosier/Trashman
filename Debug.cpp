@@ -35,6 +35,7 @@ int main() {
 
     Game g;
     g.printMap();
+    printDebugInfo();
     while (true) {
         g.tick();
         g.printMap();

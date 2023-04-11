@@ -6,7 +6,6 @@
 
 #ifndef TRASHMAN_PATHFINDING_H
 #define TRASHMAN_PATHFINDING_H
-static const int xsize = 11, ysize = 11;
 
 #include <vector>
 #include <cmath>

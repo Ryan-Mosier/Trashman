@@ -8,14 +8,14 @@ void TileData::setVoid() {
     isVoid = true;
     entity = nullptr;
     hasGarbage = false;
-    hasRecycling = false;
+    hasPP = false;
 }
 
 void TileData::setEmpty() {
     isVoid = false;
     entity = nullptr;
     hasGarbage = true;
-    hasRecycling = false;
+    hasPP = false;
 }
 
 AStarNode::AStarNode() {}
