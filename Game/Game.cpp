@@ -386,8 +386,12 @@ void Game::moveEntity(Entity *entity, Position newpos) {
 Position Game::predictPosition(Entity *entity, char prev) {
     Position currPos = entity->pos;
     Position newPos = entity->pos;
+    int predLength = 4;
+    if (abs(currPos.x - enemy[1].pos.x) + abs(currPos.y - enemy[1].pos.y)) {
+        predLength = 0;
+    }
 
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < predLength; i++) {
         //adjust newPos
         if (entity->prevMove == 'w') {
             newPos.x--;
@@ -511,7 +515,7 @@ void Game::tick() {
                 Map[enemy[1].pos.x][enemy[1].pos.y].entity = nullptr;
                 enemy[1].pos = outOfBox;
                 Map[outOfBox.x][outOfBox.y].entity = &enemy[1];
-
+                enemy[1].dead = false;
             } else if (tickNum == 28) {
                 while (Map[outOfBox.x][outOfBox.y].entity != nullptr) {
                     tickNum++;
@@ -521,15 +525,13 @@ void Game::tick() {
                 Map[enemy[2].pos.x][enemy[2].pos.y].entity = nullptr;
                 enemy[2].pos = outOfBox;
                 Map[outOfBox.x][outOfBox.y].entity = &enemy[2];
+                enemy[2].dead = false;
             }
         }
 
         //move enemies
         if (!enemy[0].dead) {
             vector<Position> path;
-
-            //TODO:power pellets?!
-
             path = a_star(enemy[0].pos, player->pos, Map);
             //vector is sorted start --> end
             if (!path.empty()) {

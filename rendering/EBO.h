@@ -10,11 +10,11 @@
 class EBO {
 public:
     EBO();
+    EBO(int){}
 
     GLuint ID;
 
-    EBO(GLuint *indices, GLsizeiptr size);
-
+    void Data(GLuint *indices, GLsizeiptr size);
     void Bind();
 
     void Unbind();

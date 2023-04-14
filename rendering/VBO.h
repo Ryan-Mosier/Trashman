@@ -10,9 +10,12 @@
 class VBO {
 public:
     VBO();
+    VBO(int){}
 
     GLuint ID;
-    VBO(GLfloat* vertices, GLsizeiptr size);
+
+    void Data(GLfloat* vertices, GLsizeiptr size);
+
 
     void Bind();
     void Unbind();

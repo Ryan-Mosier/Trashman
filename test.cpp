@@ -12,12 +12,25 @@
 #include "rendering/VBO.h"
 #include "rendering/shaderClass.h"
 #include "rendering/EBO.h"
+#include "rendering/frameCreator.h"
+
+VAO &getVAO() {
+    static VAO vao;
+    return vao;
+}
+
+EBO &getEBO() {
+    static EBO ebo;
+    return ebo;
+}
+
+VBO &getVBO() {
+    static VBO vbo;
+    return vbo;
+}
 
 GLFWwindow *window;
-GLuint  uniID;
-VAO VAO1(1);
-EBO EBO1;
-VBO VBO1;
+GLuint uniID;
 Shader shaderProgram;
 
 void setup() {
@@ -45,6 +58,16 @@ void setup() {
             3, 2, 4, // lower right triangle
             5, 4, 1 // upper triangle
     };
+//    frameCreator.verticies = new GLfloat[]{
+//            -0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 0.0f, // bottom left
+//            0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 0.0f, // top left
+//            -0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 0.0f, // bottom right
+//            0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 0.0f, // top right
+//    };
+//    frameCreator.indicies = new GLuint[]{
+//            0, 1, 2,
+//            1, 2, 3
+//    };
 
     //create a window
     window = glfwCreateWindow(800, 800, "TrashMan", NULL, NULL);
@@ -68,11 +91,14 @@ void setup() {
 
     shaderProgram = Shader("rendering/shaders/default.vert", "rendering/shaders/default.frag");
     //create reference containers for the vertex array object and the vertex buffer object
-    VAO1 = VAO();
+    VAO VAO1 = getVAO();
     VAO1.Bind();
 
-    VBO1 = VBO(verticies, sizeof(verticies));
-    EBO1 = EBO(indicies, sizeof(indicies));
+
+    VBO VBO1 = getVBO();
+    VBO1.Data(verticies, sizeof(verticies));
+    EBO EBO1 = getEBO();
+    EBO1.Data(indicies, sizeof(indicies));
 
     VAO1.LinkAttrib(VBO1, 0, 3, GL_FLOAT, 6 * sizeof(float), (void *) 0);
     VAO1.LinkAttrib(VBO1, 1, 3, GL_FLOAT, 6 * sizeof(float), (void *) (3 * sizeof(float)));
@@ -80,7 +106,7 @@ void setup() {
     VBO1.Unbind();
     EBO1.Unbind();
 
-    uniID = glGetUniformLocation(shaderProgram.ID,"scale");
+    uniID = glGetUniformLocation(shaderProgram.ID, "scale");
 
     //specify color of background
     glClearColor(0.07f, 0.13f, 0.17f, 1.0f);
@@ -91,6 +117,10 @@ void setup() {
 }
 
 void shutdown() {
+    VAO VAO1 = getVAO();
+    EBO EBO1 = getEBO();
+    VBO VBO1 = getVBO();
+
     VAO1.Delete();
     VBO1.Delete();
     EBO1.Delete();
@@ -99,10 +129,13 @@ void shutdown() {
 }
 
 void renderFrame() {
+
+    VAO VAO1 = getVAO();
+
     glClearColor(0.07f, 0.13f, 0.17f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
     shaderProgram.Activate();
-    glUniform1f(uniID,0.5f);
+    glUniform1f(uniID, 0.5f);
     VAO1.Bind();
     glDrawElements(GL_TRIANGLES, 9, GL_UNSIGNED_INT, nullptr);
 
@@ -111,10 +144,36 @@ void renderFrame() {
 }
 
 int main() {
-    setup();
+    glfwInit();
+
+    //specify version of openGL
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+
+    //create a window
+    window = glfwCreateWindow(1920, 1080, "TrashMan", NULL, NULL);
+    //failsafe
+    if (window == nullptr) {
+        std::cout << "Failed to create GLFW window" << std::endl;
+        glfwTerminate();
+        exit(-1);
+    }
+
+    //set window to current context
+    glfwMakeContextCurrent(window);
+
+    //start glad
+    gladLoadGL();
+
+
+    frameCreator frameCreator(window,getVBO(),getVAO(),getEBO());
+
+    frameCreator.readData("rendering/sprites/test2.csv");
+    frameCreator.generateFrame();
 
     while (!glfwWindowShouldClose(window)) {
-        renderFrame();
+        frameCreator.renderFrame();
 
         //take care of all GLFW events
         glfwPollEvents();
