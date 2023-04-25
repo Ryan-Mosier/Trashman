@@ -33,12 +33,12 @@ int main() {
 
     debug = true;
 
-    Game g;
-    g.printMap();
+    gameLogic g;
+    g.DebugprintMap();
     printDebugInfo();
     while (true) {
         g.tick();
-        g.printMap();
+        g.DebugprintMap();
         printDebugInfo();
     }
 }
