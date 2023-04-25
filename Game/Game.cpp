@@ -6,6 +6,7 @@
 #include <chrono>
 #include <vector>
 #include <ncurses.h>
+#include <random>
 #include <unordered_set>
 #include "Game.h"
 #include "colors.h"
@@ -14,6 +15,7 @@
 #include <unistd.h>
 #include "aStar.h"
 #include "debugValues.h"
+#include "object.h"
 
 
 using namespace std;
@@ -21,15 +23,33 @@ using namespace std;
 void fullExit() {
     system("clear");
     cout << "EXITING\n";
-    endwin(); // end ncurses mode
     exit(42);
 }
 
-
-Game::Game() {
+gameLogic::gameLogic(GameState *gs) : State(gs), pathfinding(/*#region arr*/
+        {{2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2},
+         {2, 2, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2},
+         {2, 2, 2, 2, 0, 0, 2, 0, 0, 2, 2, 2, 0, 0, 2, 2, 2, 2, 0, 0, 2, 2, 2, 0, 0, 2, 0, 0, 2, 2, 2, 2},
+         {2, 2, 2, 0, 0, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 0, 0, 2, 2, 2},
+         {0, 0, 0, 0, 2, 2, 2, 2, 2, 0, 0, 2, 0, 0, 2, 2, 2, 2, 0, 0, 2, 0, 0, 2, 2, 2, 2, 2, 0, 0, 0, 0},
+         {2, 2, 2, 0, 0, 2, 2, 2, 0, 0, 0, 2, 0, 0, 2, 2, 2, 2, 0, 0, 2, 0, 0, 0, 2, 2, 2, 0, 0, 2, 2, 2},
+         {2, 2, 2, 0, 0, 0, 2, 0, 0, 2, 0, 2, 0, 0, 2, 2, 2, 2, 0, 0, 2, 0, 2, 0, 0, 2, 0, 0, 0, 2, 2, 2},
+         {2, 2, 2, 0, 2, 0, 0, 0, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 0, 0, 0, 2, 0, 2, 2, 2},
+         {2, 2, 2, 0, 2, 2, 0, 2, 2, 2, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 2, 2, 2, 0, 2, 2, 0, 2, 9, 2},
+         {2, 7, 2, 0, 2, 2, 0, 2, 2, 2, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 2, 2, 2, 0, 2, 2, 0, 2, 8, 2},
+         {2, 2, 2, 0, 2, 0, 0, 0, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 0, 0, 0, 2, 0, 2, 2, 2},
+         {2, 2, 2, 0, 0, 0, 2, 0, 0, 2, 0, 2, 0, 0, 2, 2, 2, 2, 0, 0, 2, 0, 2, 0, 0, 2, 0, 0, 0, 2, 2, 2},
+         {2, 2, 2, 0, 0, 2, 2, 2, 0, 0, 0, 2, 0, 0, 2, 2, 2, 2, 0, 0, 2, 0, 0, 0, 2, 2, 2, 0, 0, 2, 2, 2},
+         {0, 0, 0, 0, 2, 2, 2, 2, 2, 0, 0, 2, 0, 0, 2, 2, 2, 2, 0, 0, 2, 0, 0, 2, 2, 2, 2, 2, 0, 0, 0, 0},
+         {2, 2, 2, 0, 0, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 0, 0, 2, 2, 2},
+         {2, 2, 2, 2, 0, 0, 2, 0, 0, 2, 2, 2, 0, 0, 2, 2, 2, 2, 0, 0, 2, 2, 2, 0, 0, 2, 0, 0, 2, 2, 2, 2},
+         {2, 2, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2},
+         {2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2},
+        }
+        /*#endregion*/) {
     for (int i = 0; i < xsize; i++) {
         for (int j = 0; j < ysize; j++) {
-            Map[i][j] = TileData(i, j);
+            Map[j][i] = TileData(j, i);
         }
     }
     enemy = new Entity[3];
@@ -40,122 +60,7 @@ Game::Game() {
     }
     tickNum = 0;
     score = 0;
-    generateLevel();
-    player->prevMove = 'w';
-    /*#region entity.id*/
-    player->id = "player";
-    enemy[0].id = "1";
-    enemy[1].id = "2";
-    enemy[2].id = "3";
-    /*#endregion*/
-    powerPellet = false;
-    remainingPPDuration = 0;
-}
-
-Game::~Game() {
-    delete[] enemy;
-    delete player;
-}
-
-void Game::DebugprintMap() {
-    system("clear");
-    cout << "#  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #\n";
-    for (auto &i: Map) {
-        for (int j = -1; j < xsize + 1; j++) {
-            if (j != -1 && j != xsize) {
-                if (i[j].isVoid) {
-                    cout << " # ";
-                } else if (i[j].entity != nullptr) {
-                    if (i[j].entity->id == "player") {
-                        cout << "\033[33m"; //YELLOW
-                    } else if (i[j].entity->id == "1") {
-                        cout << "\033[31m"; //RED
-                    } else if (i[j].entity->id == "2") {
-                        cout << "\033[35m"; //MAGENTA
-                    } else if (i[j].entity->id == "3") {
-                        cout << "\033[36m"; //CYAN
-                    }
-                    cout << " @ ";
-                    cout << "\033[0m";
-                } else if (!i[j].isVoid) {
-                    if (!i[j].hasGarbage) {
-                        cout << "   ";
-                    } else {
-                        cout << "\033[33m";
-                        cout << " * ";
-                        cout << "\033[0m";
-                    }
-
-                }
-            } else {
-                if (j == -1) cout << "# ";
-                else cout << " #";
-            }
-        }
-        cout << "\n";
-    }
-    cout << "#  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #\n";
-}
-
-void Game::printMap() {
-
-    if (debug) {
-        DebugprintMap();
-        return;
-    }
-
-    //TODO: Render to window
-    //remember endscreen in kill()
-    //remember some sort of intro screen before game launch
-
-    clear();
-
-    printw("#  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #\n");
-    for (auto &i: Map) {
-        for (int j = -1; j < xsize + 1; j++) {
-            if (j != -1 && j != xsize) {
-                if (i[j].isVoid) {
-                    printw(" # ");
-                } else if (i[j].hasPP) {
-                    attron(COLOR_PAIR(GREEN));
-                    printw(" $ ");
-                    attroff(COLOR_PAIR(GREEN));
-                } else if (i[j].entity != nullptr) {
-                    if (i[j].entity->id == "player") {
-                        attron(COLOR_PAIR(YELLOW)); // enable color pair 1 (YELLOW)
-                    } else if (i[j].entity->id == "1") {
-                        attron(COLOR_PAIR(RED)); // enable color pair 2 (RED)
-                    } else if (i[j].entity->id == "2") {
-                        attron(COLOR_PAIR(MAGENTA)); // enable color pair 3 (MAGENTA)
-                    } else if (i[j].entity->id == "3") {
-                        attron(COLOR_PAIR(CYAN)); // enable color pair 4 (CYAN)
-                    }
-                    printw(" @ ");
-                    attroff(COLOR_PAIR(YELLOW)); // disable color pair 1
-                    attroff(COLOR_PAIR(RED)); // disable color pair 2
-                    attroff(COLOR_PAIR(MAGENTA)); // disable color pair 3
-                    attroff(COLOR_PAIR(CYAN)); // disable color pair 4
-                } else if (!i[j].isVoid) {
-                    if (!i[j].hasGarbage) {
-                        printw("   ");
-                    } else {
-                        attron(COLOR_PAIR(YELLOW));
-                        printw(" * ");
-                        attroff(COLOR_PAIR(YELLOW));
-                    }
-
-                }
-            } else {
-                if (j == -1) printw("# ");
-                else printw(" #");
-            }
-        }
-        printw("\n");
-    }
-    printw("#  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #\n");
-}
-
-void Game::generateLevel() {
+    /*#region Map*/
 
     /*#region Tiles*/
 
@@ -181,71 +86,145 @@ void Game::generateLevel() {
 
     /*#endregion */
 
-    int arr[xsize][ysize] = {{0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-                             {0, 2, 2, 2, 0, 2, 2, 0, 0, 0, 0, 0, 2, 2, 0, 2, 2, 2, 0},
-                             {0, 2, 2, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 2, 2, 0},
-                             {0, 2, 0, 0, 2, 0, 0, 2, 0, 2, 0, 2, 0, 0, 2, 0, 0, 2, 0},
-                             {0, 0, 0, 2, 2, 2, 0, 2, 0, 2, 0, 2, 0, 2, 2, 2, 0, 0, 0},
-                             {2, 0, 0, 0, 2, 3, 0, 2, 0, 2, 0, 2, 0, 3, 2, 0, 0, 0, 2},
-                             {2, 2, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 2, 2},
-                             {2, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 2},
-                             {2, 2, 0, 2, 2, 2, 0, 2, 2, 2, 2, 2, 0, 2, 2, 2, 0, 2, 2},
-                             {0, 0, 0, 0, 0, 0, 0, 2, 7, 8, 9, 2, 0, 0, 0, 0, 0, 0, 0},
-                             {2, 2, 0, 2, 2, 2, 0, 2, 2, 2, 2, 2, 0, 2, 2, 2, 0, 2, 2},
-                             {2, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0},
-                             {2, 2, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-                             {2, 0, 0, 0, 2, 3, 0, 2, 0, 2, 0, 2, 0, 3, 2, 0, 0, 0, 0},
-                             {0, 0, 0, 2, 2, 2, 0, 2, 0, 2, 0, 2, 0, 2, 2, 2, 0, 0, 0},
-                             {0, 2, 0, 0, 2, 0, 0, 2, 0, 2, 0, 2, 0, 0, 2, 0, 0, 2, 0},
-                             {0, 2, 2, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 2, 2, 0},
-                             {0, 2, 2, 2, 0, 2, 2, 0, 0, 0, 0, 0, 2, 2, 0, 2, 2, 2, 0},
-                             {0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0}};
+    std::vector<std::vector<int>> arr =
+            {{2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2},
+             {2, 2, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2},
+             {2, 2, 2, 2, 0, 0, 2, 0, 0, 2, 2, 2, 0, 0, 2, 2, 2, 2, 0, 0, 2, 2, 2, 0, 0, 2, 0, 0, 2, 2, 2, 2},
+             {2, 2, 2, 0, 0, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 0, 0, 2, 2, 2},
+             {0, 0, 0, 0, 2, 2, 2, 2, 2, 0, 0, 2, 0, 0, 2, 2, 2, 2, 0, 0, 2, 0, 0, 2, 2, 2, 2, 2, 0, 0, 0, 0},
+             {2, 2, 2, 0, 0, 2, 2, 2, 0, 0, 0, 2, 0, 0, 2, 2, 2, 2, 0, 0, 2, 0, 0, 0, 2, 2, 2, 0, 0, 2, 2, 2},
+             {2, 2, 2, 0, 0, 0, 2, 0, 0, 2, 0, 2, 0, 0, 2, 2, 2, 2, 0, 0, 2, 0, 2, 0, 0, 2, 0, 0, 0, 2, 2, 2},
+             {2, 2, 2, 0, 2, 0, 0, 0, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 0, 0, 0, 2, 0, 2, 2, 2},
+             {2, 2, 2, 0, 2, 2, 0, 2, 2, 2, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 2, 2, 2, 0, 2, 2, 0, 2, 9, 2},
+             {2, 7, 2, 0, 2, 2, 0, 2, 2, 2, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 2, 2, 2, 0, 2, 2, 0, 2, 8, 2},
+             {2, 2, 2, 0, 2, 0, 0, 0, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 0, 0, 0, 2, 0, 2, 2, 2},
+             {2, 2, 2, 0, 0, 0, 2, 0, 0, 2, 0, 2, 0, 0, 2, 2, 2, 2, 0, 0, 2, 0, 2, 0, 0, 2, 0, 0, 0, 2, 2, 2},
+             {2, 2, 2, 0, 0, 2, 2, 2, 0, 0, 0, 2, 0, 0, 2, 2, 2, 2, 0, 0, 2, 0, 0, 0, 2, 2, 2, 0, 0, 2, 2, 2},
+             {0, 0, 0, 0, 2, 2, 2, 2, 2, 0, 0, 2, 0, 0, 2, 2, 2, 2, 0, 0, 2, 0, 0, 2, 2, 2, 2, 2, 0, 0, 0, 0},
+             {2, 2, 2, 0, 0, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 0, 0, 2, 2, 2},
+             {2, 2, 2, 2, 0, 0, 2, 0, 0, 2, 2, 2, 0, 0, 2, 2, 2, 2, 0, 0, 2, 2, 2, 0, 0, 2, 0, 0, 2, 2, 2, 2},
+             {2, 2, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2},
+             {2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2},
+            };
 
     for (int i = 0; i < xsize; i++) {
         for (int j = 0; j < ysize; j++) {
-            if (arr[i][j] == 2) Map[i][j].setVoid();
-            else if (arr[i][j] == 3) {
-                Map[i][j] = pp;
-            } else if (arr[i][j] == 0) {
-                Map[i][j].setEmpty();
+            if (arr[j][i] == 2) Map[j][i].setVoid();
+            else if (arr[j][i] == 3) {
+                Map[j][i] = pp;
+                object *node = new object(type::pp, {i, j}, null);
+                objecthandler.insert(node);
+            } else if (arr[j][i] == 0) {
+                Map[j][i].setEmpty();
                 remainingGarbage++;
-            } else if (arr[i][j] == 1) {
-                Map[i][j].setEmpty();
-                Map[i][j].entity = player;
-                Map[i][j].entity->pos = Map[i][j].pos;
-
-            } else if (arr[i][j] == 7) {
-                Map[i][j].setEmpty();
-                Map[i][j].entity = &enemy[0];
-                Map[i][j].entity->pos = Map[i][j].pos;
-            } else if (arr[i][j] == 8) {
-                Map[i][j].setEmpty();
-                Map[i][j].entity = &enemy[1];
-                Map[i][j].entity->pos = Map[i][j].pos;
-            } else if (arr[i][j] == 9) {
-                Map[i][j].setEmpty();
-                Map[i][j].entity = &enemy[2];
-                Map[i][j].entity->pos = Map[i][j].pos;
+                object *node = new object(type::pellet, {i, j}, null);
+                objecthandler.insert(node);
+            } else if (arr[j][i] == 1) {
+                Map[j][i].setEmpty();
+                Map[j][i].entity = player;
+                Map[j][i].entity->pos = Map[j][i].pos;
+                object *node = new object(type::player, {i, j}, state::left);
+                objecthandler.insert(node);
+            } else if (arr[j][i] == 7) {
+                Map[j][i].setEmpty();
+                Map[j][i].entity = &enemy[0];
+                Map[j][i].entity->pos = Map[j][i].pos;
+                object *node = new object(type::ghost_red, {i, j}, state::right);
+                objecthandler.insert(node);
+            } else if (arr[j][i] == 8) {
+                Map[j][i].setEmpty();
+                Map[j][i].entity = &enemy[1];
+                Map[j][i].entity->pos = Map[j][i].pos;
+                object *node = new object(type::ghost_pink, {i, j}, state::left);
+                objecthandler.insert(node);
+            } else if (arr[j][i] == 9) {
+                Map[j][i].setEmpty();
+                Map[j][i].entity = &enemy[2];
+                Map[j][i].entity->pos = Map[j][i].pos;
+                object *node = new object(type::ghost_yellow, {i, j}, state::left);
+                objecthandler.insert(node);
             }
         }
-
     }
     while (true) {
-        srand(time(NULL));
-        for (int i = 0; i < 10; i++) {
-            rand();
-        }
-        int r1 = rand() % xsize;
-        int r2 = rand() % ysize;
-        TileData &tile = Map[r1][r2];
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_int_distribution<> dis_x(0, xsize - 1);
+        std::uniform_int_distribution<> dis_y(0, ysize - 1);
+
+        int r1 = dis_x(gen);
+        int r2 = dis_y(gen);
+        TileData &tile = Map[r2][r1];
         if (tile.isVoid) continue;
+        if (tile.hasPP) continue;
         if (tile.entity != nullptr) continue;
+        tile.hasGarbage = false;
         tile.entity = player;
         player->pos = {r1, r2};
+        while (objecthandler.find(player->pos, type::pellet) != nullptr) {
+            object *temp = objecthandler.find(player->pos, type::pellet);
+            objecthandler.remove(temp);
+        }
+        auto *node = new object(type::player, player->pos, state::left);
+        objecthandler.insert(node);
         break;
     }
 
+    /*#endregion*/
+    this->recentInput = 'w';
+    player->prevMove = 'w';
+    /*#region entity.id*/
+    player->id = "player";
+    enemy[0].id = "1";
+    enemy[1].id = "2";
+    enemy[2].id = "3";
+    /*#endregion*/
+    powerPellet = false;
+    remainingPPDuration = 0;
+}
 
+gameLogic::~gameLogic() {
+    delete[] enemy;
+    delete player;
+}
+
+void gameLogic::DebugprintMap() {
+    system("clear");
+    for (int i = 0; i < ysize; i++) {
+        for (int j = 0; j < xsize; j++) {
+            TileData &tile = Map[i][j];
+            if (tile.isVoid) {
+                cout << " # ";
+            } else if (tile.entity != nullptr) {
+                if (tile.entity->id == "player") {
+                    cout << "\033[33m"; //YELLOW
+                } else if (tile.entity->id == "1") {
+                    cout << "\033[31m"; //RED
+                } else if (tile.entity->id == "2") {
+                    cout << "\033[35m"; //MAGENTA
+                } else if (tile.entity->id == "3") {
+                    cout << "\033[36m"; //CYAN
+                }
+                cout << " @ ";
+                cout << "\033[0m";
+            } else if (!tile.isVoid) {
+                if (!tile.hasGarbage) {
+                    cout << "   ";
+                } else {
+                    cout << "   ";
+//                    cout << "\033[33m";
+//                    cout << " * ";
+//                    cout << "\033[0m";
+                }
+
+            }
+        }
+        cout << "\n";
+    }
+}
+
+void gameLogic::printMap() {
+    DebugprintMap();
 }
 
 bool validateCharMov(char check) {
@@ -262,7 +241,7 @@ bool comparePositions(Position &p1, const Position &p2) {
     return false;
 }
 
-void Game::moveEntity(Entity *entity, char curr) {
+void gameLogic::moveEntity(Entity *entity, char curr) {
     int xpos = entity->pos.x, ypos = entity->pos.y;
 
 
@@ -273,38 +252,37 @@ void Game::moveEntity(Entity *entity, char curr) {
         return;
     }
 
+    Position currPos(xpos, ypos);
+    object *node = objecthandler.find(currPos, type::player);
+    if (node == nullptr) exit(-1);
+
     int newx = xpos, newy = ypos;
     if (entity->prevMove == 'w') {
-        newx--;
-    } else if (entity->prevMove == 's') {
-        newx++;
-    } else if (entity->prevMove == 'a') {
         newy--;
-    } else if (entity->prevMove == 'd') {
+        node->direction = up;
+    } else if (entity->prevMove == 's') {
         newy++;
-    }
-
-    Position currPos(xpos, ypos);
-    if ((entity->prevMove == 'a') && comparePositions(currPos, leftpass)) {
-        newx = rightpass.x;
-        newy = rightpass.y;
-    } else if ((entity->prevMove == 'd') && comparePositions(currPos, rightpass)) {
-        newx = leftpass.x;
-        newy = leftpass.y;
-    }
-
-    if (newy > ysize - 1) {
-        newy = 10;
-    } else if (newy < 0) {
-        newy = 0;
-    } else if (newx > xsize - 1) {
-        newx = 10;
-    } else if (newx < 0) {
-        newx = 0;
+        node->direction = down;
+    } else if (entity->prevMove == 'a') {
+        newx--;
+        node->direction = state::left;
+    } else if (entity->prevMove == 'd') {
+        newx++;
+        node->direction = state::right;
     }
 
 
-    TileData *newLoc = &Map[newx][newy];
+    //TODO: make for new passes
+    if ((entity->prevMove == 'a') && comparePositions(currPos, topLeftPass)) {
+        newx = topRightPass.x;
+        newy = topRightPass.y;
+    } else if ((entity->prevMove == 'd') && comparePositions(currPos, topRightPass)) {
+        newx = topLeftPass.x;
+        newy = topLeftPass.y;
+    }
+
+    TileData *oldLoc = &Map[ypos][xpos];
+    TileData *newLoc = &Map[newy][newx];
 
     //check collision
     if (newLoc->isVoid) {
@@ -330,20 +308,23 @@ void Game::moveEntity(Entity *entity, char curr) {
         }
     }
 
-    Map[xpos][ypos].entity = nullptr;
+    oldLoc->entity = nullptr;
     newLoc->entity = entity;
     Position newPos(newx, newy);
     entity->pos = newPos;
 
+    Position oldPos(xpos, ypos);
 
     if (entity->id == "player") {
         if (newLoc->hasGarbage) {
             score += 10;
             newLoc->hasGarbage = false;
             remainingGarbage--;
+            object *pellet = objecthandler.find(newPos, type::pellet);
+            if (pellet != nullptr) objecthandler.remove(pellet);
             if (remainingGarbage == 0) {
+                //TODO: win
                 tickNum = 0;
-                generateLevel();
             }
         }
         if (powerPellet) {
@@ -358,32 +339,61 @@ void Game::moveEntity(Entity *entity, char curr) {
             newLoc->hasPP = false;
             powerPellet = true;
             remainingPPDuration = 10;
+            objecthandler.remove(objecthandler.find(oldPos, type::pp));
         }
+        objecthandler.move(oldPos, newPos, type::player);
     }
+
 }
 
-void Game::moveEntity(Entity *entity, Position newpos) {
+state findDirection(Position p1, Position p2) {
+    if (p1.x != p2.x) {
+        if (p1.x > p2.x) {
+            return state::left;
+        }
+        return state::right;
+    }
+    if (p1.y > p2.y) {
+        return up;
+    }
+    return down;
+}
+
+void gameLogic::moveEntity(Entity *entity, Position newpos) {
     int distance = abs(entity->pos.x - newpos.x) + abs(entity->pos.y - newpos.y);
+    type typeOfEnemy = ghost_yellow;
+    object *temp = objecthandler.find(entity->pos, typeOfEnemy);
+    if (temp == nullptr) {
+        typeOfEnemy = ghost_pink;
+        temp = objecthandler.find(entity->pos, typeOfEnemy);
+    }
+    if (temp == nullptr) {
+        typeOfEnemy = ghost_red;
+        temp = objecthandler.find(entity->pos, typeOfEnemy);
+    }
+    temp->direction = findDirection(entity->pos, newpos);
     if (distance > 1) {
         return;
     }
-    if (Map[newpos.x][newpos.y].entity != nullptr) {
-        if (Map[newpos.x][newpos.y].entity == player) {
-            if (!powerPellet) {
-                kill();
-            }
-            for (int i = 0; i < 3; i++) {
-                if (&enemy[i] == entity) killEnemy(i);
-            }
+    if (newpos == player->pos) {
+        if (!powerPellet) {
+            kill();
+        }
+        for (int i = 0; i < 3; i++) {
+            if (&enemy[i] == entity) killEnemy(i);
         }
         return;
     }
+    if (Map[newpos.x][newpos.y].entity != nullptr) {
+        return;
+    }
     Map[entity->pos.x][entity->pos.y].entity = nullptr;
+    objecthandler.move(entity->pos, newpos, typeOfEnemy);
     entity->pos = newpos;
     Map[entity->pos.x][entity->pos.y].entity = entity;
 }
 
-Position Game::predictPosition(Entity *entity, char prev) {
+Position gameLogic::predictPosition(Entity *entity, char prev) {
     Position currPos = entity->pos;
     Position newPos = entity->pos;
     int predLength = 4;
@@ -422,76 +432,20 @@ Position Game::predictPosition(Entity *entity, char prev) {
     return currPos;
 }
 
-bool isValidInput(char input) {
-    std::unordered_set<char> validInputs = {'w', 'a', 's', 'd', 'k'};
-    return (validInputs.find(input) != validInputs.end());
-}
-
-std::vector<char> getPressedKeys() {
-    std::vector<char> keys;
-    char ch;
-    if (debug) {
-        char ch = '\0';
-        while (!isValidInput(ch)) {
-            cin.clear();
-            cin >> ch;
-        }
-        keys.push_back(ch);
-        return keys;
-    }
-
-
-    nodelay(stdscr, true); // don't restart the timeout everytime a key is pressed
-
-    timeout(10);
-
-    clock_t start = clock();
-
-    auto start_time = std::chrono::steady_clock::now();
-
-    while (true) {
-        ch = getch();
-        if (ch != ERR) {
-            keys.push_back(ch);
-        }
-
-        // measure elapsed time
-        clock_t end = clock();
-        double elapsedSeconds = double(end - start) / CLOCKS_PER_SEC;
-        if (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - start_time).count() >=
-            1) {
-            break;
-        }
-
-    }
-    return keys;
-}
-
-char findLatestValidKey(std::vector<char> vec) {
-    while (!vec.empty()) {
-        if (isValidInput(vec.back())) {
-            return vec.back();
-        } else {
-            vec.pop_back();
-        }
-    }
-    return '\0';
-}
-
-
-void Game::tick() {
+void gameLogic::tick() {
     char in = '\0';
     if (tickNum == 0) {
-        in = findLatestValidKey(getPressedKeys());
+        in = this->recentInput;
         moveEntity(player, in);
     } else if (tickNum % 2 == 0) {
-        in = findLatestValidKey(getPressedKeys());
+        in = this->recentInput;
         moveEntity(player, in);
-        entityPos[0] = player->pos;
+        if (debug) {
+            ::entityPos = std::vector<Position>{player->pos};
+        }
     }
 
     if (tickNum % 4 == 0) {
-
 
         //first time spawns
         if (tickNum < 30) {
@@ -499,9 +453,11 @@ void Game::tick() {
                 while (Map[outOfBox.x][outOfBox.y].entity != nullptr) {
                     tickNum++;
                     tick();
-                    printMap();
+
                 }
                 Map[enemy[0].pos.x][enemy[0].pos.y].entity = nullptr;
+                object *ghost = objecthandler.find(enemy[0].pos, type::ghost_red);
+                objecthandler.move(enemy[0].pos.reverse(), outOfBox, type::ghost_red);
                 enemy[0].pos = outOfBox;
                 Map[outOfBox.x][outOfBox.y].entity = &enemy[0];
                 enemy[0].deathlength = 0;
@@ -510,9 +466,10 @@ void Game::tick() {
                 while (Map[outOfBox.x][outOfBox.y].entity != nullptr) {
                     tickNum++;
                     tick();
-                    printMap();
+
                 }
                 Map[enemy[1].pos.x][enemy[1].pos.y].entity = nullptr;
+                objecthandler.move(enemy[1].pos.reverse(), outOfBox, type::ghost_pink);
                 enemy[1].pos = outOfBox;
                 Map[outOfBox.x][outOfBox.y].entity = &enemy[1];
                 enemy[1].dead = false;
@@ -520,9 +477,10 @@ void Game::tick() {
                 while (Map[outOfBox.x][outOfBox.y].entity != nullptr) {
                     tickNum++;
                     tick();
-                    printMap();
+
                 }
                 Map[enemy[2].pos.x][enemy[2].pos.y].entity = nullptr;
+                objecthandler.move(enemy[2].pos.reverse(), outOfBox, type::ghost_yellow);
                 enemy[2].pos = outOfBox;
                 Map[outOfBox.x][outOfBox.y].entity = &enemy[2];
                 enemy[2].dead = false;
@@ -532,10 +490,12 @@ void Game::tick() {
         //move enemies
         if (!enemy[0].dead) {
             vector<Position> path;
-            path = a_star(enemy[0].pos, player->pos, Map);
+            path = pathfinding.aStar(enemy[0].pos, player->pos);
             //vector is sorted start --> end
             if (!path.empty()) {
                 moveEntity(&enemy[0], path[1]);
+            } else {
+                cerr << "Path Empty!\n";
             }
 
             if (debug) {
@@ -555,7 +515,7 @@ void Game::tick() {
         if (!enemy[1].dead) {
             vector<Position> path;
 
-            path = a_star(enemy[1].pos, predictPosition(player, player->prevMove), Map);
+            path = pathfinding.aStar(enemy[1].pos, predictPosition(player, player->prevMove));
             if (!path.empty()) {
                 moveEntity(&enemy[1], path[1]);
             }
@@ -577,41 +537,22 @@ void Game::tick() {
             }
         }
         if (!enemy[2].dead) {
-            int distance = calcDistance(&enemy[2].pos, &player->pos);
+
+            int dis = distance(enemy[2].pos, player->pos);
             vector<Position> path;
-            if (distance < 6) {
-                path = a_star(enemy[2].pos, player->pos, Map);
+            if (dis < 6) {
+                path = pathfinding.aStar(enemy[2].pos, player->pos);
                 //vector is sorted start --> end
                 if (!path.empty()) {
                     moveEntity(&enemy[2], path[1]);
                 }
 
             } else {
-                vector<Position> possible;
-                for (int i = -1; i <= 1; i++) {
-                    for (int j = -1; j <= 1; j++) {
-                        if (abs(i) == abs(j)) continue;
-                        if (i == 0 && j == 0) continue;
-                        Position pos(enemy[2].pos.x + i, enemy[2].pos.y + j);
-                        if (pos.x < 0 || pos.x >= xsize || pos.y + j < 0 || pos.y + j >= ysize) continue;
-                        if (Map[pos.x][pos.y].isVoid) continue;
-                        if (Map[pos.x][pos.y].entity != nullptr) continue;
-                        possible.emplace_back(enemy[2].pos.x + i, enemy[2].pos.y + j);
-                    }
-                }
-                if (!possible.empty()) {
-                    int random = rand() % int(possible.size());
-                    if (debug) {
-                        path = vector<Position>(2);
-                        path[0] = enemy[2].pos;
-                        path[1] = possible[random];
-                    }
-                    moveEntity(&enemy[2], possible[random]);
-                } else if (debug) {
-                    path = vector<Position>(1);
-                    path[0] = enemy[2].pos;
-                }
-
+                std::random_device rd;
+                std::mt19937 gen(rd());
+                std::uniform_real_distribution<> dist;
+                int value = dist(gen);
+                pathfinding.random(enemy[2].pos, value);
             }
             if (debug) {
                 debugPath[2] = path;
@@ -631,16 +572,11 @@ void Game::tick() {
     tickNum++;
 }
 
-void Game::kill() {
-    system("clear");
-    cout << "You Died!\n========\nYour Score: " << score << "\n";
-    this_thread::sleep_for(chrono::seconds(2));
-    //TODO: add endscreen (render)
-    endwin(); // end ncurses mode
-    exit(1);
+void gameLogic::kill() {
+    *State = GameState::dead;
 }
 
-void Game::killEnemy(int i) {
+void gameLogic::killEnemy(int i) {
     Entity *curr = &enemy[i];
     score += (i + 1) * 1000;
     curr->dead = true;

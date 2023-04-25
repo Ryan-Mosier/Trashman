@@ -8,21 +8,30 @@
 #include <string>
 #include "aStar.h"
 #include "Structures.h"
+#include "object.h"
+
+enum GameState {
+    waiting,
+    playing,
+    dead
+};
 
 using namespace std;
 
-void fullExit();
-
-class Game {
+class gameLogic {
 private:
+    GameState *State;
 
+    Astar pathfinding;
 
-    int tickNum;
-    TileData Map[xsize][ysize];
+    TileData Map[ysize][xsize];
+
     Entity *enemy;
     // array of size 3
 
     Entity *player;
+
+    objectHandler objecthandler;
 
     /*
      * Pac-Dot = 10 Pts
@@ -34,14 +43,19 @@ private:
 
     int score;
     int remainingGarbage;
-    bool powerPellet;
+
     int remainingPPDuration;
 
 public:
+    bool powerPellet;
+    int tickNum;
+    object **head = &objecthandler.head;
 
-    Game();
+    char recentInput;
 
-    ~Game();
+    gameLogic(GameState *);
+
+    ~gameLogic();
 
     void DebugprintMap();
 

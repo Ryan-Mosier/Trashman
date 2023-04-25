@@ -3,6 +3,7 @@
 //
 
 #include "Structures.h"
+#include <limits.h>
 
 void TileData::setVoid() {
     isVoid = true;
@@ -16,10 +17,4 @@ void TileData::setEmpty() {
     entity = nullptr;
     hasGarbage = true;
     hasPP = false;
-}
-
-AStarNode::AStarNode() {}
-
-AStarNode::AStarNode(TileData &tileData) {
-    position = tileData.pos;
 }

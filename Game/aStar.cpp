@@ -1,116 +1,239 @@
-//
-// Created by ryanm on 3/2/2023.
-//
-
-#include "aStar.h"
-#include <queue>
-#include <vector>
-#include <cmath>
-#include <algorithm>
-#include "Game.h"
 #include <iostream>
+#include <vector>
+#include <queue>
+#include <unordered_set>
+#include <functional>
+#include <limits.h>
+#include <stack>
+#include "Structures.h"
+#include "aStar.h"
 
 using namespace std;
 
-int calcDistance(AStarNode *node1, AStarNode *node2) {
-    return abs(node1->position.x - node2->position.x) + abs(node1->position.y - node2->position.y);
+bool CompareNodes::operator()(const AStarNode *node1, const AStarNode *node2) const {
+    return node1->f_cost > node2->f_cost;
 }
 
-int calcDistance(Position *node1, Position *node2) {
-    return abs(node1->x - node2->x) + abs(node1->y - node2->y);
+size_t NodeHasher::operator()(const AStarNode *node) const {
+    std::size_t h1 = std::hash<int>{}(node->position.x);
+    std::size_t h2 = std::hash<int>{}(node->position.y);
+    return h1 ^ (h2 << 1);
+}
+
+bool NodeComparator::operator()(const AStarNode *lhs, const AStarNode *rhs) const {
+    return lhs->position == rhs->position;
 }
 
 
-void convertMap(Position startpos, Position goalpos, TileData map[xsize][ysize], TileData *&start, TileData *&goal) {
+int heuristic(Position startpos, Position goalpos) {
+    int dx = abs(startpos.x - goalpos.x);
+    int dy = abs(startpos.y - goalpos.y);
+    return dx + dy;
+}
 
-    goal = &map[goalpos.x][goalpos.y];
-    start = &map[startpos.x][startpos.y];
+int distance(Position a, Position b) {
+    return abs(a.x - b.x) + abs(a.y - b.y);
+}
 
-    //set empty
-    for (int i = 0; i < xsize; i++) {
-        for (int j = 0; j < ysize; j++) {
-            AStarNode &Node = map[i][j].aStarNode;
-            Node.f_cost = 0;
-            Node.g_cost = 1000000;
-            Node.h_cost = 0;
-            Node.parent = nullptr;
-            Node.obstacle = map[i][j].isVoid;
+bool checkIfEdgeExists(AStarNode *r, int x2, int y2) {
+    for (auto i: r->adjacent) {
+        if (i->position.x == x2) {
+            if (i->position.y == y2) return true;
         }
     }
-
-//    for (int i = 0; i < xsize; i++) {
-//        std::cout << "# ";
-//        for (int j = 0; j < ysize; j++) {
-//            if(map[i][j].aStarNode.obstacle){
-//                std::cout << " # ";
-//            }else{
-//                std::cout << "   ";
-//            }
-//        }
-//        std::cout << " #";
-//        std::cout << "\n";
-//    }
+    return false;
 }
 
-//g is distance from start
-//h is estimated distance from goal
-
-std::vector<Position> convertPath(std::vector<AStarNode *> in) {
-    std::vector<Position> out;
-    while (!in.empty()) {
-        Position temp(in.back()->position.x, in.back()->position.y);
-        out.push_back(temp);
-        in.pop_back();
-    }
-    return out;
-}
-
-std::vector<Position> a_star(Position startpos, Position goalpos, TileData map[xsize][ysize]) {
-    TileData *start;
-    TileData *goal;
-    convertMap(startpos, goalpos, map, start, goal);
-    AStarNode &start_node = start->aStarNode;
-    AStarNode &goal_node = goal->aStarNode;
-    vector<AStarNode *> path;
-    priority_queue<pair<int, AStarNode *>, vector<pair<int, AStarNode *>>, greater<pair<int, AStarNode *>>> pq;
-
-    start_node.g_cost = 0;
-    start_node.h_cost = calcDistance(&start->aStarNode, &goal->aStarNode);
-    start_node.f_cost = start_node.g_cost + start_node.h_cost;
-    pq.push({start_node.f_cost, &start_node});
-    while (!pq.empty()) {
-        AStarNode *current_node = pq.top().second;
-        pq.pop();
-        if (current_node == &goal_node) {
-            // Reconstruct the path
-            while (current_node != &start_node) {
-                path.push_back(current_node);
-                current_node = current_node->parent;
-            }
-            path.push_back(&start_node);
-            break;
+vector<Position> Astar::findAdjacent(Position p1) {
+    int x = p1.x, y = p1.y;
+    vector<Position> neighbors;
+    for (int i = -1; i <= 1; i++) {
+        for (int j = -1; j <= 1; j++) {
+            if (abs(i) == abs(j))continue;
+            if (x + i < 0 || x + i >= xsize || y + j < 0 || y + j >= ysize) continue;
+            if (vec[y + j][x + i] != 2) neighbors.emplace_back(x + i, y + j);
         }
-        current_node->obstacle = true; // Mark current node as obstacle to avoid revisiting it
-        int x = current_node->position.x;
-        int y = current_node->position.y;
-        for (int i = -1; i <= 1; i++) {
-            for (int j = -1; j <= 1; j++) {
-                if (abs(i) == abs(j)) continue;
-                if (i == 0 && j == 0) continue;
-                if (x + i < 0 || x + i >= xsize || y + j < 0 || y + j >= ysize) continue;
-                if (map[x + i][y + j].aStarNode.obstacle) continue;
-                AStarNode *neighbor = &map[x + i][y + j].aStarNode;
-                int tentative_g_cost = current_node->g_cost + calcDistance(current_node, neighbor);
-                if (tentative_g_cost < neighbor->g_cost) {
-                    neighbor->parent = current_node;
-                    neighbor->g_cost = tentative_g_cost;
-                    neighbor->h_cost = calcDistance(neighbor, &goal_node);
-                    neighbor->f_cost = neighbor->g_cost + neighbor->h_cost;
-                    pq.push({neighbor->f_cost, neighbor});
+    }
+    return neighbors;
+}
+
+void Astar::addEdge(Position p1, Position p2) {
+    int x1 = p1.x, y1 = p1.y;
+    int x2 = p2.x, y2 = p2.y;
+    for (unsigned int i = 0; i < nodes.size(); i++) {
+        if (nodes[i]->position.x == x1 && nodes[i]->position.y == y1) {
+            for (unsigned int j = 0; j < nodes.size(); j++) {
+                if (i != j && nodes[j]->position.x == x2 && nodes[j]->position.y == y2) {
+                    if (!checkIfEdgeExists(nodes[i], x2, y2)) {
+                        AStarNode *av;
+                        av = nodes[j];
+                        nodes[i]->adjacent.push_back(av);
+                        // another vertex for edge in other direction
+                        AStarNode *av2;
+                        av2 = nodes[i];
+                        nodes[j]->adjacent.push_back(av2);
+                        break;
+                    }
                 }
             }
         }
     }
-    vector<Position> posData = convertPath(path);
-    return posData;
+}
+
+void Astar::addNode(Position pos) {
+    auto *node = new AStarNode(pos);
+    nodes.emplace_back(node);
+}
+
+Astar::Astar(std::vector<std::vector<int>> vec) : vec(vec) {
+    for (int i = 0; i < vec.size(); i++) {
+        for (int j = 0; j < vec[i].size(); j++) {
+            if (this->vec[i][j] == 2) continue;
+            addNode({j, i});
+        }
+    }
+    for (auto i: nodes) {
+        vector<Position> neighbors = findAdjacent(i->position);
+        for (auto j: neighbors) {
+            addEdge(i->position, j);
+        }
+        if (i->adjacent.empty()) {
+            nodes.end() = std::remove(nodes.begin(), nodes.end(), i);
+        }
+    }
+}
+
+void Astar::resetNode(AStarNode *node) {
+    auto temp = node->adjacent;
+    *node = AStarNode(node->position);
+    node->adjacent = temp;
+}
+
+AStarNode *Astar::find(const Position &pos) {
+    for (auto i: nodes) {
+        if (i->position == pos) return i;
+    }
+    return nullptr;
+}
+
+bool Astar::BFS(AStarNode *n1, AStarNode *n2) {
+    if (!n1 || !n2) {
+        cerr << "Invalid inputs\n";
+        return false;
+    }
+    for (auto i: nodes) {
+        i->visited = false;
+    }
+
+    queue<AStarNode *> q;
+    modified.emplace(n1);
+    n1->visited = true;
+    q.push(n1);
+    while (!q.empty()) {
+        AStarNode *curr = q.front();
+        q.pop();
+        if (curr == n2) return true;
+        for (auto i: curr->adjacent) {
+            if (i->visited) continue;
+            modified.emplace(i);
+            i->parent = curr;
+            i->visited = true;
+            q.push(i);
+        }
+    }
+    return false;
+}
+
+std::vector<Position> Astar::aStar(const Position &start, const Position &goal) {
+    AStarNode *startNode = find(start);
+    AStarNode *goalNode = find(goal);
+    if (!startNode || !goalNode) {
+        return {};
+    }
+    if (!BFS(startNode, goalNode)) {
+        cerr << "Bad Graph!!";
+        return {};
+    } else {
+        std::vector<Position> path;
+        AStarNode *node = goalNode;
+        while (node != nullptr) {
+            path.push_back(node->position);
+            node = node->parent;
+        }
+        std::reverse(path.begin(), path.end());
+        while (!modified.empty()) {
+            resetNode(modified.top());
+            modified.pop();
+        }
+        return path;
+    }
+
+
+    std::priority_queue<AStarNode *, std::vector<AStarNode *>, CompareNodes> openSet;
+    std::unordered_set<AStarNode *, NodeHasher, NodeComparator> closedSet;
+
+    modified.emplace(startNode);
+    startNode->g_cost = 0;
+    startNode->h_cost = heuristic(start, goal);
+    startNode->f_cost = startNode->g_cost + startNode->h_cost;
+    openSet.push(startNode);
+
+    while (!openSet.empty()) {
+        AStarNode *currentNode = openSet.top();
+        openSet.pop();
+
+        if (currentNode == goalNode) {
+            // Build path from start to goal
+            std::vector<Position> path;
+            AStarNode *node = currentNode;
+            while (node != nullptr) {
+                path.push_back(node->position);
+                node = node->parent;
+            }
+            std::reverse(path.begin(), path.end());
+            while (!modified.empty()) {
+                resetNode(modified.top());
+                modified.pop();
+            }
+            return path;
+        }
+
+        closedSet.insert(currentNode);
+
+        for (AStarNode *neighborNode: currentNode->adjacent) {
+            if (closedSet.find(neighborNode) != closedSet.end()) {
+                // Neighbor has already been evaluated
+                continue;
+            }
+
+            int tentativeGCost = currentNode->g_cost + distance(currentNode->position, neighborNode->position);
+            int neighborHCost = heuristic(neighborNode->position, goal);
+
+            if (tentativeGCost < neighborNode->g_cost) {
+                // set does not contain the neighbor or the new path is better
+                modified.emplace(neighborNode);
+                neighborNode->g_cost = tentativeGCost;
+                neighborNode->h_cost = neighborHCost;
+                neighborNode->f_cost = neighborNode->g_cost + neighborNode->h_cost;
+                neighborNode->parent = currentNode;
+
+                if (openSet.empty() || openSet.top()->f_cost > neighborNode->f_cost) {
+                    openSet.push(neighborNode);
+                }
+            }
+        }
+    }
+
+
+    while (!modified.empty()) {
+        resetNode(modified.top());
+        modified.pop();
+    }
+    return {};
+}
+
+Position Astar::random(Position pos, int in) {
+    AStarNode *node = find(pos);
+    in %= node->adjacent.size();
+    return node->adjacent[in]->position;
 }
