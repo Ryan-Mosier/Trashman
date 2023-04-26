@@ -32,15 +32,6 @@ struct Position {
         return (x == other.x && y == other.y);
     }
 
-    bool operator<=>(Position other) const {
-        // Check if other is above, below, left, or right of this position
-        if (other.x == x && other.y == y - 1) return true; // above
-        if (other.x == x && other.y == y + 1) return true; // below
-        if (other.x == x - 1 && other.y == y) return true; // left
-        if (other.x == x + 1 && other.y == y) return true; // right
-        return false;
-    }
-
     [[nodiscard]] Position reverse() const {
         return {y,x};
     }
